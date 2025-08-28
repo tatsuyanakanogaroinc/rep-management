@@ -205,13 +205,17 @@ export default function DashboardPage() {
               </div>
               <div className="space-y-3">
                 {quickActions.map((action, index) => (
-                  <Link key={action.title} href={action.href}>
-                    <div className="group p-4 rounded-xl glass hover:bg-white/50 transition-all duration-200 cursor-pointer">
+                  <Link 
+                    key={action.title} 
+                    href={action.href}
+                    className="block no-underline"
+                  >
+                    <div className="group p-4 rounded-xl glass hover:bg-white/50 transition-all duration-200 cursor-pointer relative z-10 border border-transparent hover:border-primary/20">
                       <div className="flex items-center space-x-4">
                         <div className={`flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-r ${action.color} text-white text-xl shadow-lg group-hover:scale-105 transition-transform duration-200`}>
                           {action.icon}
                         </div>
-                        <div>
+                        <div className="flex-1">
                           <h3 className="font-medium text-foreground group-hover:text-primary transition-colors">
                             {action.title}
                           </h3>
@@ -228,6 +232,23 @@ export default function DashboardPage() {
                     </div>
                   </Link>
                 ))}
+              </div>
+              
+              {/* 代替ボタンも追加 */}
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <div className="grid grid-cols-1 gap-2">
+                  {quickActions.map((action) => (
+                    <Link key={`btn-${action.title}`} href={action.href}>
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-start bg-white/80 hover:bg-white/90"
+                      >
+                        <span className="mr-3">{action.icon}</span>
+                        {action.title}
+                      </Button>
+                    </Link>
+                  ))}
+                </div>
               </div>
             </div>
 
