@@ -90,10 +90,31 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (existingReport) {
-      return NextResponse.json(
-        { error: 'Daily report for this date already exists' },
-        { status: 409 }
-      );
+      // Update existing report instead of returning error
+      const { data, error } = await supabase
+        .from('daily_reports')
+        .update(body)
+        .eq('user_id', body.user_id)
+        .eq('date', body.date)
+        .select(`
+          *,
+          users!daily_reports_user_id_fkey (
+            id,
+            name,
+            email
+          )
+        `)
+        .single();
+
+      if (error) {
+        console.error('Error updating daily report:', error);
+        return NextResponse.json(
+          { error: 'Failed to update daily report' },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json(data, { status: 200 });
     }
 
     const { data, error } = await supabase
