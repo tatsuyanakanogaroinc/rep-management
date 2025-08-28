@@ -26,12 +26,24 @@ export function LoginForm() {
       const { error } = await signIn(email, password);
       
       if (error) {
+        console.error('SignIn error:', error);
         setError(error.message);
       } else {
         router.push('/dashboard');
       }
     } catch (err) {
-      setError('ログイン中にエラーが発生しました');
+      console.error('SignIn catch error:', err);
+      if (err instanceof Error) {
+        if (err.message.includes('Failed to fetch')) {
+          setError('サーバーに接続できません。インターネット接続を確認してください。');
+        } else if (err.message.includes('Supabase configuration error')) {
+          setError('システム設定エラーが発生しました。管理者にお問い合わせください。');
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError('ログイン中にエラーが発生しました');
+      }
     } finally {
       setLoading(false);
     }

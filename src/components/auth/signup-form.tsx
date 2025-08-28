@@ -42,6 +42,7 @@ export function SignUpForm() {
       const { data, error } = await signUp(email, password, name);
       
       if (error) {
+        console.error('SignUp error:', error);
         setError(error.message);
       } else if (data.user) {
         if (data.user.email_confirmed_at) {
@@ -51,7 +52,18 @@ export function SignUpForm() {
         }
       }
     } catch (err) {
-      setError('アカウント作成中にエラーが発生しました');
+      console.error('SignUp catch error:', err);
+      if (err instanceof Error) {
+        if (err.message.includes('Failed to fetch')) {
+          setError('サーバーに接続できません。インターネット接続を確認してください。');
+        } else if (err.message.includes('Supabase configuration error')) {
+          setError('システム設定エラーが発生しました。管理者にお問い合わせください。');
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError('アカウント作成中にエラーが発生しました');
+      }
     } finally {
       setLoading(false);
     }
