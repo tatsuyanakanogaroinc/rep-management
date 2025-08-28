@@ -33,8 +33,8 @@
 
 現在のコードで使用している値：
 ```
-URL: https://nykqhkilrhoavelihllqw.supabase.co
-Key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55a3Foa2lscmhvYXZlbGlsbHF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzOGM4NTEsImV4cCI6MjA3MVQ1OTg1MX0.lDFxOGnFhq_DyTDfqYr6TBFiOeaKXP5LoMVE1kLXQ1Q
+URL: https://nykqhkilrhoavelillqw.supabase.co
+Key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55a3Foa2lscmhvYXZlbGlsbHF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzOGM4NTEsImV4cCI6MjA3MVE1OTg1MX0.lDFxOGnFhq_DyTDfqYr6TBFiOeaKXP5LoMVE1kLXQ1Q
 ```
 
 **これらが正しいか確認してください！**

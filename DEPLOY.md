@@ -8,7 +8,7 @@ Last updated: 2025-01-28
 
 ## 環境変数
 
-- `NEXT_PUBLIC_SUPABASE_URL`: https://nykqhkilrhoavelihllqw.supabase.co
+- `NEXT_PUBLIC_SUPABASE_URL`: https://nykqhkilrhoavelillqw.supabase.co
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: [Supabase Anon Key]
 
 ## システム機能

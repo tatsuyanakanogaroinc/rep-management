@@ -27,7 +27,7 @@ export default function DebugPage() {
       console.log('Testing Supabase config:', config);
       
       // Direct URL test
-      const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://nykqhkilrhoavelihllqw.supabase.co';
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://nykqhkilrhoavelillqw.supabase.co';
       
       const urlTest = await fetch(url + '/rest/v1/', {
         method: 'GET',
