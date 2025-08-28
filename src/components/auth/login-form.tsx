@@ -38,6 +38,10 @@ export function LoginForm() {
           setError('サーバーに接続できません。インターネット接続を確認してください。');
         } else if (err.message.includes('Supabase configuration error')) {
           setError('システム設定エラーが発生しました。管理者にお問い合わせください。');
+        } else if (err.message.includes('Invalid login credentials')) {
+          setError('メールアドレスまたはパスワードが正しくありません。');
+        } else if (err.message.includes('Email not confirmed')) {
+          setError('メールアドレスが確認されていません。管理者にお問い合わせください。');
         } else {
           setError(err.message);
         }
