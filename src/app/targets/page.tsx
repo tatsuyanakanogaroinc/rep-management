@@ -10,7 +10,8 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import Link from 'next/link';
-import { Target, Plus, TrendingUp, AlertCircle } from 'lucide-react';
+import { Target, Plus, TrendingUp, AlertCircle, FileSpreadsheet } from 'lucide-react';
+import { EnhancedTargetImport } from '@/components/features/targets/enhanced-target-import';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthContext } from '@/lib/auth-context';
@@ -34,6 +35,7 @@ export default function TargetsPage() {
     const now = new Date();
     return format(now, 'yyyy-MM');
   });
+  const [showImport, setShowImport] = useState(false);
 
   const [newTarget, setNewTarget] = useState({
     metric_type: '',
@@ -167,6 +169,14 @@ export default function TargetsPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                <Button
+                  onClick={() => setShowImport(!showImport)}
+                  variant="outline"
+                  className="glass hover:bg-white/20"
+                >
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                  {showImport ? 'インポート非表示' : 'データインポート'}
+                </Button>
                 <Link href="/dashboard">
                   <Button variant="outline" className="glass hover:bg-white/20">
                     ダッシュボードに戻る
@@ -180,6 +190,12 @@ export default function TargetsPage() {
         {/* メインコンテンツ */}
         <main className="relative z-10 max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
           <div className="space-y-8">
+            {/* データインポート機能 */}
+            {showImport && (
+              <div className="animate-fade-in">
+                <EnhancedTargetImport />
+              </div>
+            )}
             {/* 新しい目標追加 */}
             <Card className="glass">
               <CardHeader>
