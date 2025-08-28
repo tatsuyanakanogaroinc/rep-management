@@ -18,7 +18,8 @@ export default function DashboardPage() {
     return format(now, 'yyyy-MM');
   });
 
-  const { data: dashboardData, isLoading } = useDashboardData(selectedMonth);
+  // 認証されている場合のみデータを取得
+  const { data: dashboardData, isLoading } = useDashboardData(selectedMonth, !!user);
 
   const handleSignOut = async () => {
     await signOut();

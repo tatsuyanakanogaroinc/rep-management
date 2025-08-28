@@ -17,7 +17,7 @@ export default function MonthlyReportPage() {
     return format(now, 'yyyy-MM');
   });
 
-  const { data: dashboardData, isLoading } = useDashboardData(selectedMonth);
+  const { data: dashboardData, isLoading } = useDashboardData(selectedMonth, true);
 
   // 過去12ヶ月の選択肢を生成
   const generateMonthOptions = () => {

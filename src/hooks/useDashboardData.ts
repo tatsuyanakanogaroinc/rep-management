@@ -14,9 +14,10 @@ export interface DashboardData {
   monthlyReports: number;
 }
 
-export function useDashboardData(selectedMonth: string) {
+export function useDashboardData(selectedMonth: string, enabled: boolean = true) {
   return useQuery({
     queryKey: ['dashboard-data', selectedMonth],
+    enabled,
     queryFn: async (): Promise<DashboardData> => {
       const monthStart = startOfMonth(new Date(selectedMonth + '-01'));
       const monthEnd = endOfMonth(monthStart);
