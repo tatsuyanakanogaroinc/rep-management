@@ -58,29 +58,25 @@ export function SignUpForm() {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle>アカウント作成</CardTitle>
-        <CardDescription>
-          SNS経営管理システムのアカウントを作成します。
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="w-full max-w-md mx-auto">
+      <div className="glass rounded-2xl shadow-soft border-0 p-8 backdrop-blur-lg">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
-            <Alert variant="destructive">
+            <Alert variant="destructive" className="border-0 bg-destructive/10 text-destructive">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
           
           {message && (
-            <Alert>
+            <Alert className="border-0 bg-primary/10 text-primary">
               <AlertDescription>{message}</AlertDescription>
             </Alert>
           )}
           
-          <div className="space-y-2">
-            <Label htmlFor="name">氏名</Label>
+          <div className="space-y-3">
+            <Label htmlFor="name" className="text-sm font-medium text-foreground">
+              氏名
+            </Label>
             <Input
               id="name"
               type="text"
@@ -88,23 +84,29 @@ export function SignUpForm() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
+              className="h-12 rounded-xl border-0 bg-white/50 backdrop-blur-sm shadow-soft focus:bg-white/80 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
             />
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="email">メールアドレス</Label>
+          <div className="space-y-3">
+            <Label htmlFor="email" className="text-sm font-medium text-foreground">
+              メールアドレス
+            </Label>
             <Input
               id="email"
               type="email"
-              placeholder="user@example.com"
+              placeholder="your@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              className="h-12 rounded-xl border-0 bg-white/50 backdrop-blur-sm shadow-soft focus:bg-white/80 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
             />
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="password">パスワード</Label>
+          <div className="space-y-3">
+            <Label htmlFor="password" className="text-sm font-medium text-foreground">
+              パスワード
+            </Label>
             <Input
               id="password"
               type="password"
@@ -112,11 +114,14 @@ export function SignUpForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              className="h-12 rounded-xl border-0 bg-white/50 backdrop-blur-sm shadow-soft focus:bg-white/80 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
             />
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">パスワード確認</Label>
+          <div className="space-y-3">
+            <Label htmlFor="confirmPassword" className="text-sm font-medium text-foreground">
+              パスワード確認
+            </Label>
             <Input
               id="confirmPassword"
               type="password"
@@ -124,14 +129,26 @@ export function SignUpForm() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
+              className="h-12 rounded-xl border-0 bg-white/50 backdrop-blur-sm shadow-soft focus:bg-white/80 focus:ring-2 focus:ring-primary/20 transition-all duration-200"
             />
           </div>
           
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'アカウント作成中...' : 'アカウント作成'}
+          <Button 
+            type="submit" 
+            className="w-full h-12 rounded-xl gradient-primary text-white border-0 shadow-soft hover:shadow-glow transition-all duration-300 font-medium text-base disabled:opacity-50 disabled:cursor-not-allowed" 
+            disabled={loading}
+          >
+            {loading ? (
+              <div className="flex items-center justify-center space-x-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span>アカウント作成中...</span>
+              </div>
+            ) : (
+              'アカウント作成'
+            )}
           </Button>
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
