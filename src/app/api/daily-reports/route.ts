@@ -7,6 +7,14 @@ type DailyReportInsert = Database['public']['Tables']['daily_reports']['Insert']
 
 export async function GET(request: NextRequest) {
   try {
+    // Runtime check for environment variables
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('user_id');
     const date = searchParams.get('date');
@@ -55,6 +63,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Runtime check for environment variables
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
     const body: DailyReportInsert = await request.json();
 
     // Validate required fields
