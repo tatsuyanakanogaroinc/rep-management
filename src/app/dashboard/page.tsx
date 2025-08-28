@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useDashboardWithTargets } from '@/hooks/useDashboardWithTargets';
 import { ProgressCard } from '@/components/ui/progress-card';
+import { AIPredictionsCard } from '@/components/features/ai/ai-predictions-card';
 import Link from 'next/link';
 import { useState } from 'react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
@@ -311,29 +312,9 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* 最新の活動 */}
-            <div className="glass rounded-2xl p-6 shadow-soft animate-fade-in" style={{ animationDelay: '500ms' }}>
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold text-foreground mb-2">最新の活動</h2>
-                <p className="text-muted-foreground">システムの最新の更新情報</p>
-              </div>
-              <div className="space-y-4">
-                <div className="flex items-start space-x-4 p-4 rounded-xl glass">
-                  <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mt-2 shadow-glow"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground">システムが初期化されました</p>
-                    <p className="text-xs text-muted-foreground mt-1">今すぐ</p>
-                  </div>
-                </div>
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 mx-auto rounded-full glass flex items-center justify-center mb-4">
-                    <svg className="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <p className="text-sm text-muted-foreground">データの入力を開始して、<br />活動履歴を確認しましょう</p>
-                </div>
-              </div>
+            {/* AI予測とアラート */}
+            <div className="animate-fade-in" style={{ animationDelay: '500ms' }}>
+              <AIPredictionsCard currentMonth={selectedMonth} />
             </div>
           </div>
         </main>
