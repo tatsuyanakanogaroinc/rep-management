@@ -24,8 +24,33 @@ export default function DebugPage() {
     setLoading(true);
     try {
       const config = getSupabaseConfig();
+      console.log('Testing Supabase config:', config);
+      
+      // Direct URL test
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://nykqhkilrhoavelihllqw.supabase.co';
+      
+      const urlTest = await fetch(url + '/rest/v1/', {
+        method: 'GET',
+        headers: {
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+          'Authorization': 'Bearer ' + (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '')
+        }
+      }).then(res => ({
+        ok: res.ok,
+        status: res.status,
+        statusText: res.statusText
+      })).catch(err => ({
+        ok: false,
+        error: err.message
+      }));
+
       const testResult = await testSupabaseConnection();
-      setSupabaseTest({ config, testResult });
+      setSupabaseTest({ 
+        config, 
+        testResult, 
+        urlTest,
+        timestamp: new Date().toISOString()
+      });
     } catch (error) {
       setSupabaseTest({ error: error instanceof Error ? error.message : 'Unknown error' });
     }
