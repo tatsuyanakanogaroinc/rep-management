@@ -4,16 +4,15 @@ import { Database } from '@/types/supabase';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-// During build time, provide placeholder values to avoid errors
-const isDuringBuild = process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV;
+// Check if we're in build phase (no VERCEL_ENV means local build, CI=true means Vercel build)
+const isBuildPhase = process.env.CI === 'true' || process.env.NODE_ENV === 'production';
 
-const finalUrl = supabaseUrl || (isDuringBuild ? 'https://placeholder.supabase.co' : '');
-const finalKey = supabaseAnonKey || (isDuringBuild ? 'placeholder-key' : '');
+const finalUrl = supabaseUrl || 'https://placeholder.supabase.co';
+const finalKey = supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDcwNDAzMDcsImV4cCI6MTk2MjYxNjMwN30.placeholder';
 
-if (!finalUrl || !finalKey) {
-  if (!isDuringBuild) {
-    throw new Error('Missing Supabase environment variables');
-  }
+// Only throw error during runtime if environment variables are missing
+if (!supabaseUrl && !isBuildPhase && typeof window !== 'undefined') {
+  throw new Error('Missing Supabase environment variables');
 }
 
 export const supabase = createClient<Database>(finalUrl, finalKey);
