@@ -17,26 +17,59 @@ console.log('🔍 Supabase Debug Info:', {
   url: supabaseUrl,
   hasKey: !!supabaseAnonKey,
   keyPrefix: supabaseAnonKey ? supabaseAnonKey.substring(0, 20) + '...' : 'MISSING',
+  keySuffix: supabaseAnonKey ? '...' + supabaseAnonKey.substring(supabaseAnonKey.length - 20) : 'MISSING',
   isClient,
   timestamp: new Date().toISOString()
 });
 
-// URL接続テスト
+//詳細なAPI接続テスト
 if (typeof window !== 'undefined') {
-  fetch(supabaseUrl + '/health', { method: 'HEAD' })
-    .then(response => {
-      console.log('🌐 Supabase URL Test:', {
-        status: response.status,
-        ok: response.ok,
-        url: supabaseUrl
-      });
-    })
-    .catch(error => {
-      console.error('❌ Supabase URL Test Failed:', {
-        error: error.message,
-        url: supabaseUrl
-      });
+  // REST API テスト
+  fetch(supabaseUrl + '/rest/v1/', {
+    method: 'GET',
+    headers: {
+      'apikey': supabaseAnonKey,
+      'Authorization': `Bearer ${supabaseAnonKey}`,
+      'Content-Type': 'application/json'
+    }
+  }).then(response => {
+    console.log('🔗 Supabase REST API Test:', {
+      status: response.status,
+      ok: response.ok,
+      statusText: response.statusText,
+      url: supabaseUrl + '/rest/v1/'
     });
+    return response.text();
+  }).then(text => {
+    console.log('📄 REST API Response:', text);
+  }).catch(error => {
+    console.error('❌ Supabase REST API Test Failed:', {
+      error: error.message,
+      url: supabaseUrl + '/rest/v1/'
+    });
+  });
+
+  // Auth API テスト
+  fetch(supabaseUrl + '/auth/v1/', {
+    method: 'GET',
+    headers: {
+      'apikey': supabaseAnonKey,
+      'Authorization': `Bearer ${supabaseAnonKey}`,
+      'Content-Type': 'application/json'
+    }
+  }).then(response => {
+    console.log('🔐 Supabase Auth API Test:', {
+      status: response.status,
+      ok: response.ok,
+      statusText: response.statusText,
+      url: supabaseUrl + '/auth/v1/'
+    });
+  }).catch(error => {
+    console.error('❌ Supabase Auth API Test Failed:', {
+      error: error.message,
+      url: supabaseUrl + '/auth/v1/'
+    });
+  });
 }
 
 // 無料プランでは常に設定値を使用（プレースホルダーは使わない）
