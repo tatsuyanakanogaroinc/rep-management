@@ -1,21 +1,36 @@
-# Deploy Status
+# 社内専用SNS経営管理システム
 
 Last updated: 2025-01-28
 
-## Environment Variables Required
+## システム概要
+
+このシステムは **社内専用** です。一般会員登録は無効になっており、事前に登録されたメンバーのみがアクセス可能です。
+
+## 環境変数
 
 - `NEXT_PUBLIC_SUPABASE_URL`: https://nykqhkilrhoavelihllqw.supabase.co
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: [Supabase Anon Key]
 
-## Deployment Checklist
+## システム機能
 
-- [x] Environment variables configured in Vercel
-- [x] Build errors resolved
-- [x] Runtime environment validation added
-- [ ] Successful signup/login testing
+### アクセス制御
+- [x] 一般会員登録を削除
+- [x] signup ページはログインページにリダイレクト
+- [x] 社内専用メッセージを表示
 
-## Debug URLs
+### ユーザー管理
+- [ ] 事前登録ユーザーの作成
+- [ ] 管理者・マネージャー・メンバー権限の設定
 
-- `/debug` - Environment variable checker
-- `/signup` - Test signup functionality
-- `/login` - Test login functionality
+## 事前登録ユーザー作成手順
+
+1. `create-admin-users.sql` を参照
+2. Supabase Dashboard でユーザーを手動作成
+3. SQLでユーザープロファイルを設定
+
+## アクセス URL
+
+- `/` - ランディングページ（社内専用表示）
+- `/login` - ログインページ
+- `/signup` - 自動でログインページにリダイレクト
+- `/debug` - システム状況確認（開発用）

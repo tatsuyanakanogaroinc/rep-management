@@ -1,60 +1,40 @@
-import { SignUpForm } from '@/components/auth/signup-form';
-import { EnvCheck } from '@/components/env-check';
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function SignUpPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // 新規登録ページにアクセスしたら自動的にログインページにリダイレクト
+    router.replace('/login');
+  }, [router]);
+
   return (
     <div className="relative min-h-screen overflow-hidden">
-      <EnvCheck />
       {/* 背景グラデーション */}
       <div className="absolute inset-0 gradient-mesh opacity-20" />
       
-      {/* ナビゲーション */}
-      <nav className="relative z-10 bg-white/80 backdrop-blur-lg border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <Link href="/" className="flex items-center space-x-3">
-              <div className="w-8 h-8 rounded-lg gradient-primary shadow-glow" />
-              <span className="text-xl font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                SMS
-              </span>
-            </Link>
-            <Link href="/login">
-              <button className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                ログイン
-              </button>
-            </Link>
-          </div>
-        </div>
-      </nav>
-
       {/* メインコンテンツ */}
-      <div className="relative z-10 flex items-center justify-center min-h-[calc(100vh-4rem)] py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full animate-fade-in">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">
-              <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                始めましょう
-              </span>
+      <div className="relative z-10 flex items-center justify-center min-h-screen px-4 sm:px-6 lg:px-8">
+        <div className="text-center animate-fade-in">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-foreground mb-4">
+              社内専用システム
             </h1>
-            <p className="text-muted-foreground">
-              アカウントを作成してSNS経営管理システムを始めましょう
+            <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+              一般会員登録は無効になっています。<br />
+              ログインページに移動しています...
             </p>
           </div>
           
-          <SignUpForm />
-          
-          <div className="text-center mt-6">
-            <p className="text-sm text-muted-foreground">
-              既にアカウントをお持ちの方は{' '}
-              <Link 
-                href="/login" 
-                className="font-medium bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent hover:opacity-80 transition-opacity"
-              >
-                こちらからログイン
-              </Link>
-            </p>
-          </div>
+          <Link href="/login">
+            <button className="gradient-primary text-white border-0 shadow-soft hover:shadow-glow transition-all duration-300 px-8 py-3 rounded-xl">
+              ログインページへ
+            </button>
+          </Link>
         </div>
       </div>
     </div>

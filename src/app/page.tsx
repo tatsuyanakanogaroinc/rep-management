@@ -48,13 +48,8 @@ export default function Home() {
             </div>
             <div className="flex items-center space-x-4">
               <Link href="/login">
-                <Button variant="ghost" className="hidden sm:inline-flex">
-                  ログイン
-                </Button>
-              </Link>
-              <Link href="/signup">
                 <Button className="gradient-primary text-white border-0 shadow-soft hover:shadow-glow transition-all duration-300">
-                  無料で始める
+                  社内ログイン
                 </Button>
               </Link>
             </div>
@@ -66,28 +61,22 @@ export default function Home() {
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
         <div className="text-center animate-fade-in">
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold">
-            <span className="block">次世代の</span>
-            <span className="block mt-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            <span className="block bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               SNS経営管理システム
             </span>
           </h1>
           <p className="mt-6 max-w-2xl mx-auto text-lg sm:text-xl text-muted-foreground leading-relaxed">
-            データドリブンな意思決定で、ビジネスの成長を加速。
+            社内専用システム - データドリブンな意思決定でビジネスの成長を加速。
             リアルタイムな分析と美しいダッシュボードで経営を可視化します。
           </p>
           
-          <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/signup">
+          <div className="mt-10 flex justify-center">
+            <Link href="/login">
               <Button size="lg" className="gradient-primary text-white border-0 shadow-soft hover:shadow-glow transition-all duration-300 px-8 py-6 text-lg">
-                無料で始める
+                社内ログイン
                 <svg className="ml-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-              </Button>
-            </Link>
-            <Link href="/login">
-              <Button variant="outline" size="lg" className="px-8 py-6 text-lg border-2 hover:border-primary transition-colors">
-                ログインはこちら
               </Button>
             </Link>
           </div>
@@ -149,14 +138,14 @@ export default function Home() {
         <div className="mt-32 text-center">
           <div className="inline-block p-8 md:p-12 rounded-3xl bg-gradient-to-r from-primary/10 to-accent/10 backdrop-blur-sm">
             <h2 className="text-3xl font-bold mb-4">
-              今すぐ始めましょう
+              社内メンバー専用
             </h2>
             <p className="text-lg text-muted-foreground mb-8 max-w-md mx-auto">
-              クレジットカード不要。いつでもキャンセル可能。
+              事前に登録されたアカウントでログインしてください。
             </p>
-            <Link href="/signup">
+            <Link href="/login">
               <Button size="lg" className="gradient-primary text-white border-0 shadow-soft hover:shadow-glow transition-all duration-300 px-8 py-6 text-lg">
-                無料アカウントを作成
+                ログイン
               </Button>
             </Link>
           </div>

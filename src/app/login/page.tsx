@@ -17,11 +17,9 @@ export default function LoginPage() {
                 SMS
               </span>
             </Link>
-            <Link href="/signup">
-              <button className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                新規登録
-              </button>
-            </Link>
+            <span className="text-sm text-muted-foreground">
+              社内専用システム
+            </span>
           </div>
         </div>
       </nav>
@@ -44,13 +42,8 @@ export default function LoginPage() {
           
           <div className="text-center mt-6">
             <p className="text-sm text-muted-foreground">
-              アカウントをお持ちでない方は{' '}
-              <Link 
-                href="/signup" 
-                className="font-medium bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent hover:opacity-80 transition-opacity"
-              >
-                こちらから登録
-              </Link>
+              社内メンバー専用システムです。<br />
+              アカウントについてはシステム管理者にお問い合わせください。
             </p>
           </div>
         </div>
