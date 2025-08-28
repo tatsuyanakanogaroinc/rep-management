@@ -3,8 +3,8 @@ import { Database } from '@/types/supabase';
 
 // Supabaseプロジェクト設定（直接設定）
 // 注意: これらの値が正しいかSupabaseダッシュボードで再確認してください
-const FALLBACK_SUPABASE_URL = 'https://nykqhkilrhoavelillqw.supabase.co';
-const FALLBACK_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im55a3Foa2lscmhvYXZlbGlsbHF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzODM4NTEsImV4cCI6MjA3MVE1OTg1MX0.lDFxOGnFhq_DyTDfqYr6TBFiOeaKXP5LoMVE1kLXQ1Q';
+const FALLBACK_SUPABASE_URL = 'https://qcddtdhntrskmonjtrxe.supabase.co';
+const FALLBACK_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjZGR0ZGhudHJza21vbmp0cnhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzOTI0ODMsImV4cCI6MjA3MVE2ODQ4M30.hPuK_ZC0qA7TJ7Ef0TZ_Lr1sE3qjYelQ69rct1mh4MQ';
 
 // Get environment variables with fallback
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || FALLBACK_SUPABASE_URL;
