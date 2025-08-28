@@ -3,47 +3,74 @@
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { useAuthContext } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useDashboardData } from '@/hooks/useDashboardData';
 import Link from 'next/link';
+import { useState } from 'react';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { ja } from 'date-fns/locale';
 
 export default function DashboardPage() {
   const { user, userProfile, signOut } = useAuthContext();
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return format(now, 'yyyy-MM');
+  });
+
+  const { data: dashboardData, isLoading } = useDashboardData(selectedMonth);
 
   const handleSignOut = async () => {
     await signOut();
   };
 
+  // 過去12ヶ月の選択肢を生成
+  const generateMonthOptions = () => {
+    const options = [];
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const value = format(date, 'yyyy-MM');
+      const label = format(date, 'yyyy年MM月', { locale: ja });
+      options.push({ value, label });
+    }
+    return options;
+  };
+
+  const monthOptions = generateMonthOptions();
+
   const metrics = [
     {
       title: 'MRR',
-      value: '¥0',
+      value: isLoading ? '¥-' : `¥${dashboardData?.mrr?.toLocaleString() || 0}`,
       description: '月次経常収益',
       icon: '💰',
       color: 'from-green-500 to-emerald-500',
-      change: '+0%'
+      change: dashboardData?.mrrChange || '+0%'
     },
     {
       title: '有料会員数',
-      value: '0',
+      value: isLoading ? '-' : (dashboardData?.activeCustomers || 0).toString(),
       description: 'アクティブ会員',
       icon: '👥',
       color: 'from-blue-500 to-cyan-500',
-      change: '+0'
+      change: dashboardData?.activeCustomersChange || '+0'
     },
     {
       title: '新規獲得',
-      value: '0',
-      description: '今月の新規獲得',
+      value: isLoading ? '-' : (dashboardData?.newAcquisitions || 0).toString(),
+      description: '選択月の新規獲得',
       icon: '📈',
       color: 'from-purple-500 to-violet-500',
-      change: '+0'
+      change: `+${dashboardData?.newAcquisitions || 0}`
     },
     {
       title: 'チャーン率',
-      value: '0%',
+      value: isLoading ? '-%' : `${dashboardData?.churnRate || 0}%`,
       description: '月次解約率',
       icon: '📊',
       color: 'from-orange-500 to-red-500',
-      change: '0%'
+      change: `${dashboardData?.churnRate || 0}%`
     }
   ];
 
@@ -54,6 +81,13 @@ export default function DashboardPage() {
       icon: '📝',
       href: '/daily-report',
       color: 'from-blue-500 to-purple-500'
+    },
+    {
+      title: '月次レポート',
+      description: '詳細な月次分析を表示',
+      icon: '📊',
+      href: '/monthly-report',
+      color: 'from-green-500 to-blue-500'
     },
     {
       title: '顧客を追加',
@@ -68,6 +102,13 @@ export default function DashboardPage() {
       icon: '💰',
       href: '/expenses',
       color: 'from-pink-500 to-orange-500'
+    },
+    {
+      title: 'KPI目標管理',
+      description: '月次目標の設定と進捗確認',
+      icon: '🎯',
+      href: '/targets',
+      color: 'from-orange-500 to-red-500'
     }
   ];
 
@@ -88,10 +129,22 @@ export default function DashboardPage() {
                   </span>
                 </h1>
                 <p className="text-muted-foreground mt-1">
-                  ビジネスの状況を一目で把握
+                  {format(new Date(selectedMonth + '-01'), 'yyyy年MM月', { locale: ja })}のビジネス状況
                 </p>
               </div>
               <div className="flex items-center space-x-4">
+                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                  <SelectTrigger className="w-48 glass hover:bg-white/20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {monthOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <div className="glass rounded-xl px-4 py-2 text-right">
                   <p className="text-sm font-medium text-foreground">
                     {userProfile?.name || user?.email}
