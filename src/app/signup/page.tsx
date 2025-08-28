@@ -1,9 +1,11 @@
 import { SignUpForm } from '@/components/auth/signup-form';
+import { EnvCheck } from '@/components/env-check';
 import Link from 'next/link';
 
 export default function SignUpPage() {
   return (
     <div className="relative min-h-screen overflow-hidden">
+      <EnvCheck />
       {/* 背景グラデーション */}
       <div className="absolute inset-0 gradient-mesh opacity-20" />
       
