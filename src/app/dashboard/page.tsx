@@ -5,7 +5,8 @@ import { useAuthContext } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useDashboardData } from '@/hooks/useDashboardData';
+import { useDashboardWithTargets } from '@/hooks/useDashboardWithTargets';
+import { ProgressCard } from '@/components/ui/progress-card';
 import Link from 'next/link';
 import { useState } from 'react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
@@ -19,7 +20,7 @@ export default function DashboardPage() {
   });
 
   // 認証されている場合のみデータを取得
-  const { data: dashboardData, isLoading } = useDashboardData(selectedMonth, !!user);
+  const { data: dashboardData, isLoading } = useDashboardWithTargets(selectedMonth, !!user);
 
   const handleSignOut = async () => {
     await signOut();
@@ -40,38 +41,53 @@ export default function DashboardPage() {
 
   const monthOptions = generateMonthOptions();
 
-  const metrics = [
+  const progressMetrics = [
     {
       title: 'MRR',
       value: isLoading ? '¥-' : `¥${dashboardData?.mrr?.toLocaleString() || 0}`,
-      description: '月次経常収益',
+      target: dashboardData?.mrrTarget,
+      actual: dashboardData?.mrr || 0,
+      progress: dashboardData?.mrrProgress || 0,
+      difference: dashboardData?.mrrDifference || 0,
+      change: dashboardData?.mrrChange || '+0%',
       icon: '💰',
       color: 'from-green-500 to-emerald-500',
-      change: dashboardData?.mrrChange || '+0%'
+      unit: 'currency' as const
     },
     {
       title: '有料会員数',
       value: isLoading ? '-' : (dashboardData?.activeCustomers || 0).toString(),
-      description: 'アクティブ会員',
+      target: dashboardData?.activeCustomersTarget,
+      actual: dashboardData?.activeCustomers || 0,
+      progress: dashboardData?.activeCustomersProgress || 0,
+      difference: dashboardData?.activeCustomersDifference || 0,
+      change: dashboardData?.activeCustomersChange || '+0',
       icon: '👥',
       color: 'from-blue-500 to-cyan-500',
-      change: dashboardData?.activeCustomersChange || '+0'
+      unit: 'count' as const
     },
     {
       title: '新規獲得',
       value: isLoading ? '-' : (dashboardData?.newAcquisitions || 0).toString(),
-      description: '選択月の新規獲得',
+      target: dashboardData?.newAcquisitionsTarget,
+      actual: dashboardData?.newAcquisitions || 0,
+      progress: dashboardData?.newAcquisitionsProgress || 0,
+      difference: dashboardData?.newAcquisitionsDifference || 0,
       icon: '📈',
       color: 'from-purple-500 to-violet-500',
-      change: `+${dashboardData?.newAcquisitions || 0}`
+      unit: 'count' as const
     },
     {
       title: 'チャーン率',
       value: isLoading ? '-%' : `${dashboardData?.churnRate || 0}%`,
-      description: '月次解約率',
+      target: dashboardData?.churnRateTarget,
+      actual: dashboardData?.churnRate || 0,
+      progress: dashboardData?.churnRateProgress || 0,
+      difference: dashboardData?.churnRateDifference || 0,
       icon: '📊',
       color: 'from-orange-500 to-red-500',
-      change: `${dashboardData?.churnRate || 0}%`
+      unit: 'percentage' as const,
+      isInverted: true
     }
   ];
 
@@ -170,31 +186,74 @@ export default function DashboardPage() {
         <main className="relative z-10 max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
           {/* メトリクスカード */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {metrics.map((metric, index) => (
-              <div
+            {progressMetrics.map((metric, index) => (
+              <div 
                 key={metric.title}
-                className="group glass rounded-2xl p-6 shadow-soft hover:shadow-xl transition-all duration-300 hover:-translate-y-1 animate-fade-in"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
-                <div className={`absolute inset-0 bg-gradient-to-r ${metric.color} opacity-0 group-hover:opacity-5 rounded-2xl transition-opacity duration-300`} />
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-r ${metric.color} text-white text-xl shadow-lg`}>
-                      {metric.icon}
-                    </div>
-                    <span className="text-sm font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                      {metric.change}
-                    </span>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">{metric.title}</p>
-                    <p className="text-3xl font-bold text-foreground">{metric.value}</p>
-                    <p className="text-xs text-muted-foreground">{metric.description}</p>
-                  </div>
-                </div>
+                <ProgressCard
+                  title={metric.title}
+                  value={metric.value}
+                  target={metric.target}
+                  actual={metric.actual}
+                  progress={metric.progress}
+                  difference={metric.difference}
+                  change={metric.change}
+                  icon={metric.icon}
+                  color={metric.color}
+                  unit={metric.unit}
+                  isInverted={metric.isInverted}
+                />
               </div>
             ))}
           </div>
+
+          {/* 支出メトリクス */}
+          {dashboardData?.monthlyExpensesTarget && (
+            <div className="mb-8">
+              <Card className="glass">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    💰 月次支出管理
+                  </CardTitle>
+                  <CardDescription>
+                    予算との比較と支出状況
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <ProgressCard
+                      title="月次支出"
+                      value={`¥${dashboardData.totalExpenses.toLocaleString()}`}
+                      target={dashboardData.monthlyExpensesTarget}
+                      actual={dashboardData.totalExpenses}
+                      progress={dashboardData.expensesProgress}
+                      difference={dashboardData.expensesDifference}
+                      icon="💸"
+                      color="from-red-500 to-pink-500"
+                      unit="currency"
+                      isInverted={true}
+                    />
+                    <div className="flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="text-4xl mb-2">
+                          {dashboardData.expensesProgress <= 80 ? '✅' : 
+                           dashboardData.expensesProgress <= 100 ? '⚠️' : '🚨'}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {dashboardData.expensesProgress <= 80 ? '予算内で順調' : 
+                           dashboardData.expensesProgress <= 100 ? '予算上限に注意' : '予算超過'}
+                        </p>
+                        <p className="text-lg font-semibold mt-2">
+                          予算残り: ¥{Math.max(0, (dashboardData.monthlyExpensesTarget || 0) - dashboardData.totalExpenses).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* クイックアクション */}
