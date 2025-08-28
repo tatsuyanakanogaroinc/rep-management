@@ -84,7 +84,7 @@ export type Database = {
           date: string;
           new_acquisitions: number;
           churns: number;
-          acquisition_details: Record<string, any>;
+          acquisition_details: Record<string, number>;
           activities: string | null;
           tomorrow_plan: string | null;
           customer_feedback: string | null;
@@ -97,7 +97,7 @@ export type Database = {
           date: string;
           new_acquisitions?: number;
           churns?: number;
-          acquisition_details?: Record<string, any>;
+          acquisition_details?: Record<string, number>;
           activities?: string | null;
           tomorrow_plan?: string | null;
           customer_feedback?: string | null;
@@ -110,7 +110,7 @@ export type Database = {
           date?: string;
           new_acquisitions?: number;
           churns?: number;
-          acquisition_details?: Record<string, any>;
+          acquisition_details?: Record<string, number>;
           activities?: string | null;
           tomorrow_plan?: string | null;
           customer_feedback?: string | null;

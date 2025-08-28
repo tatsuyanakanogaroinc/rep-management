@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { Database } from '@/types/supabase';
 
-type CustomerUpdate = Database['public']['Tables']['customers']['Update'];
+type ExpenseUpdate = Database['public']['Tables']['expenses']['Update'];
 
 interface RouteParams {
   params: Promise<{
@@ -14,21 +14,33 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
     const { data, error } = await supabase
-      .from('customers')
-      .select('*')
+      .from('expenses')
+      .select(`
+        *,
+        created_by_user:users!expenses_created_by_fkey (
+          id,
+          name,
+          email
+        ),
+        approved_by_user:users!expenses_approved_by_fkey (
+          id,
+          name,
+          email
+        )
+      `)
       .eq('id', id)
       .single();
 
     if (error) {
       if (error.code === 'PGRST116') {
         return NextResponse.json(
-          { error: 'Customer not found' },
+          { error: 'Expense not found' },
           { status: 404 }
         );
       }
-      console.error('Error fetching customer:', error);
+      console.error('Error fetching expense:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch customer' },
+        { error: 'Failed to fetch expense' },
         { status: 500 }
       );
     }
@@ -46,26 +58,38 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const body: CustomerUpdate = await request.json();
+    const body: ExpenseUpdate = await request.json();
 
     const { data, error } = await supabase
-      .from('customers')
+      .from('expenses')
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .update(body as any)
       .eq('id', id)
-      .select()
+      .select(`
+        *,
+        created_by_user:users!expenses_created_by_fkey (
+          id,
+          name,
+          email
+        ),
+        approved_by_user:users!expenses_approved_by_fkey (
+          id,
+          name,
+          email
+        )
+      `)
       .single();
 
     if (error) {
       if (error.code === 'PGRST116') {
         return NextResponse.json(
-          { error: 'Customer not found' },
+          { error: 'Expense not found' },
           { status: 404 }
         );
       }
-      console.error('Error updating customer:', error);
+      console.error('Error updating expense:', error);
       return NextResponse.json(
-        { error: 'Failed to update customer' },
+        { error: 'Failed to update expense' },
         { status: 500 }
       );
     }
@@ -84,14 +108,14 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
     const { error } = await supabase
-      .from('customers')
+      .from('expenses')
       .delete()
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting customer:', error);
+      console.error('Error deleting expense:', error);
       return NextResponse.json(
-        { error: 'Failed to delete customer' },
+        { error: 'Failed to delete expense' },
         { status: 500 }
       );
     }
