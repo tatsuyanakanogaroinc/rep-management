@@ -134,6 +134,20 @@ export default function DashboardPage() {
       icon: '⚙️',
       href: '/settings',
       color: 'from-gray-500 to-slate-500'
+    },
+    {
+      title: '流入経路管理',
+      description: 'チャネル別目標設定と実績トラッキング',
+      icon: '📊',
+      href: '/channels',
+      color: 'from-cyan-500 to-blue-500'
+    },
+    {
+      title: 'コホート分析',
+      description: '顧客のリテンション率とLTV分析',
+      icon: '👥',
+      href: '/cohort-analysis',
+      color: 'from-purple-500 to-indigo-500'
     }
   ];
 
