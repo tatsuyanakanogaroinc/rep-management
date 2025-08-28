@@ -20,6 +20,11 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
         return;
       }
 
+      // 特定の役割が必要だが、プロファイルがない場合は待機
+      if (requiredRole && user && !userProfile) {
+        return;
+      }
+
       if (requiredRole && userProfile?.role) {
         const roleHierarchy = { member: 1, manager: 2, admin: 3 };
         const userRoleLevel = roleHierarchy[userProfile.role];
@@ -33,6 +38,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     }
   }, [user, userProfile, loading, requiredRole, router]);
 
+  // ローディング中の場合のみ表示
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">

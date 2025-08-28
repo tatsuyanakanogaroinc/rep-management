@@ -50,11 +50,14 @@ export function useAuth() {
 
       if (error) {
         console.error('Error fetching user profile:', error);
+        // プロファイルが見つからない場合でも認証状態は維持
+        setUserProfile(null);
       } else {
         setUserProfile(data);
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
+      setUserProfile(null);
     } finally {
       setLoading(false);
     }
