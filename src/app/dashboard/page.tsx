@@ -127,6 +127,13 @@ export default function DashboardPage() {
       icon: '🎯',
       href: '/targets',
       color: 'from-orange-500 to-red-500'
+    },
+    {
+      title: 'システム設定',
+      description: 'サービス設定と成長パラメータ管理',
+      icon: '⚙️',
+      href: '/settings',
+      color: 'from-gray-500 to-slate-500'
     }
   ];
 
