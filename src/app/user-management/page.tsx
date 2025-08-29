@@ -3,11 +3,12 @@
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { useAuthContext } from '@/lib/auth-context';
 import { UserCreationForm } from '@/components/features/user-management/user-creation-form';
+import { UserList } from '@/components/features/user-management/user-list';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Users, Shield, UserPlus, Settings, ArrowLeft } from 'lucide-react';
+import { Users, Shield, UserPlus, Settings, ArrowLeft, Trash2, UserMinus } from 'lucide-react';
 import Link from 'next/link';
 import { getUserList } from '@/lib/user-management';
 import { useQuery } from '@tanstack/react-query';
@@ -91,121 +92,97 @@ export default function UserManagementPage() {
 
         {/* メインコンテンツ */}
         <main className="relative z-10 max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="space-y-8">
             
-            {/* 左側: ユーザー作成フォーム */}
-            <div className="lg:col-span-2">
-              <div className="animate-fade-in">
-                <UserCreationForm />
-              </div>
+            {/* ユーザー作成フォーム */}
+            <div className="animate-fade-in">
+              <UserCreationForm />
             </div>
 
-            {/* 右側: 既存ユーザー一覧と統計 */}
-            <div className="space-y-6">
-              {/* 統計情報 */}
-              <Card className="glass animate-fade-in" style={{ animationDelay: '200ms' }}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings className="w-5 h-5" />
-                    システム統計
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {isLoading ? (
-                    <div className="animate-pulse space-y-3">
-                      <div className="h-4 bg-gray-200 rounded"></div>
-                      <div className="h-4 bg-gray-200 rounded"></div>
-                      <div className="h-4 bg-gray-200 rounded"></div>
+            {/* システム統計 */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 animate-fade-in" style={{ animationDelay: '200ms' }}>
+              <Card className="glass">
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <Users className="h-8 w-8 text-blue-600" />
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-muted-foreground">総ユーザー数</p>
+                      <p className="text-2xl font-bold">{userListData?.users?.length || 0}</p>
                     </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">総ユーザー数</span>
-                        <span className="font-semibold">{userListData?.users?.length || 0}人</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">管理者</span>
-                        <span className="font-semibold">
-                          {userListData?.users?.filter(u => u.role === 'admin').length || 0}人
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">マネージャー</span>
-                        <span className="font-semibold">
-                          {userListData?.users?.filter(u => u.role === 'manager').length || 0}人
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">メンバー</span>
-                        <span className="font-semibold">
-                          {userListData?.users?.filter(u => u.role === 'member').length || 0}人
-                        </span>
-                      </div>
-                    </div>
-                  )}
+                  </div>
                 </CardContent>
               </Card>
-
-              {/* 既存ユーザー一覧 */}
-              <Card className="glass animate-fade-in" style={{ animationDelay: '400ms' }}>
-                <CardHeader>
-                  <CardTitle>最近のユーザー</CardTitle>
-                  <CardDescription>直近5人の登録ユーザー</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {isLoading ? (
-                    <div className="space-y-3">
-                      {Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="animate-pulse">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-                            <div className="flex-1">
-                              <div className="h-4 bg-gray-200 rounded mb-1"></div>
-                              <div className="h-3 bg-gray-200 rounded w-20"></div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+              
+              <Card className="glass">
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <Shield className="h-8 w-8 text-red-600" />
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-muted-foreground">管理者</p>
+                      <p className="text-2xl font-bold">
+                        {userListData?.users?.filter(u => u.role === 'admin').length || 0}
+                      </p>
                     </div>
-                  ) : userListData?.users && userListData.users.length > 0 ? (
-                    <div className="space-y-3">
-                      {userListData.users.slice(0, 5).map((user) => (
-                        <div key={user.id} className="flex items-center justify-between p-3 rounded-lg bg-white/50">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                              {user.name ? user.name[0].toUpperCase() : user.email[0].toUpperCase()}
-                            </div>
-                            <div>
-                              <p className="font-medium text-sm">{user.name || user.email.split('@')[0]}</p>
-                              <p className="text-xs text-muted-foreground">{user.email}</p>
-                            </div>
-                          </div>
-                          <Badge 
-                            variant={user.role === 'admin' ? 'default' : 'outline'}
-                            className="text-xs"
-                          >
-                            {user.role === 'admin' ? '管理者' : 
-                             user.role === 'manager' ? 'マネージャー' : 'メンバー'}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-center text-muted-foreground py-6">
-                      ユーザーが見つかりません
-                    </p>
-                  )}
+                  </div>
                 </CardContent>
               </Card>
+              
+              <Card className="glass">
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <Settings className="h-8 w-8 text-blue-600" />
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-muted-foreground">マネージャー</p>
+                      <p className="text-2xl font-bold">
+                        {userListData?.users?.filter(u => u.role === 'manager').length || 0}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="glass">
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <Users className="h-8 w-8 text-green-600" />
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-muted-foreground">メンバー</p>
+                      <p className="text-2xl font-bold">
+                        {userListData?.users?.filter(u => u.role === 'member').length || 0}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-              {/* 重要な注意事項 */}
-              <Alert className="animate-fade-in" style={{ animationDelay: '600ms' }}>
+            {/* ユーザー一覧 */}
+            <div className="animate-fade-in" style={{ animationDelay: '400ms' }}>
+              <UserList 
+                users={userListData?.users || []} 
+                isLoading={isLoading} 
+              />
+            </div>
+
+            {/* 重要な注意事項 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in" style={{ animationDelay: '600ms' }}>
+              <Alert>
                 <UserPlus className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>セキュリティに関する注意:</strong><br />
+                  <strong>ユーザー作成に関する注意:</strong><br />
                   • 生成されたパスワードは一度しか表示されません<br />
                   • ユーザーには安全な方法で認証情報を伝達してください<br />
                   • 初回ログイン後のパスワード変更を推奨します
+                </AlertDescription>
+              </Alert>
+              
+              <Alert>
+                <Trash2 className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>ユーザー削除に関する注意:</strong><br />
+                  • <UserMinus className="w-3 h-3 inline mx-1" />無効化: アカウントを一時的に無効にします<br />
+                  • <Trash2 className="w-3 h-3 inline mx-1" />削除: ユーザーデータを完全に削除します<br />
+                  • 削除操作は取り消すことができません
                 </AlertDescription>
               </Alert>
             </div>
