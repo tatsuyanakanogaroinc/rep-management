@@ -24,44 +24,62 @@ export function generateTargetsFromParameters(parameters: GrowthParametersInput)
   // 開始月: 2025年9月
   const startDate = new Date('2025-09-01');
   
-  // 計算期間: 36ヶ月
-  const months = 36;
+  // 計算期間: 12ヶ月（1年間）に制限
+  const months = 12;
   
   // 初期値
   let cumulativeCustomers = 0;
   let previousMonthCustomers = 0;
   
+  // 数値の上限設定（データベースのinteger型の最大値を考慮）
+  const MAX_CUSTOMERS = 1000000; // 100万人
+  const MAX_MRR = 2147483647; // PostgreSQLのinteger型の最大値
+  const MAX_ACQUISITIONS = 100000; // 10万人/月
+  
   for (let i = 0; i < months; i++) {
     const currentDate = addMonths(startDate, i);
     const period = format(currentDate, 'yyyy-MM');
     
-    // 新規獲得数の計算（成長率を適用）
-    const newAcquisitions = Math.round(
-      parameters.initial_acquisitions * Math.pow(1 + parameters.monthly_growth_rate / 100, i)
-    );
+    // 成長率を段階的に減衰させる（成長の持続可能性を考慮）
+    const decayFactor = Math.pow(0.95, i); // 月ごとに5%ずつ成長率を減衰
+    const adjustedGrowthRate = parameters.monthly_growth_rate * decayFactor;
+    
+    // 新規獲得数の計算（成長率を適用、上限設定）
+    const rawNewAcquisitions = parameters.initial_acquisitions * Math.pow(1 + adjustedGrowthRate / 100, i);
+    const newAcquisitions = Math.min(MAX_ACQUISITIONS, Math.round(rawNewAcquisitions));
     
     // チャーン数の計算（前月の顧客数にチャーン率を適用）
     const churnCount = Math.round(previousMonthCustomers * (parameters.churn_rate / 100));
     
-    // アクティブ顧客数の計算
-    cumulativeCustomers = Math.max(0, cumulativeCustomers + newAcquisitions - churnCount);
+    // アクティブ顧客数の計算（上限設定）
+    cumulativeCustomers = Math.min(MAX_CUSTOMERS, Math.max(0, cumulativeCustomers + newAcquisitions - churnCount));
     
     // MRRの計算（月額顧客70%、年額顧客30%と仮定）
     const monthlyCustomers = Math.round(cumulativeCustomers * 0.7);
     const yearlyCustomers = Math.round(cumulativeCustomers * 0.3);
-    const mrr = monthlyCustomers * parameters.monthly_price + 
-                yearlyCustomers * Math.round(parameters.yearly_price / 12);
+    const rawMrr = monthlyCustomers * parameters.monthly_price + 
+                   yearlyCustomers * Math.round(parameters.yearly_price / 12);
+    const mrr = Math.min(MAX_MRR, rawMrr);
     
     // 支出予算の計算（売上に応じたスケーリング）
     const baseExpenses = 800000; // 基本固定費
     const variableExpenses = mrr * 0.4; // 売上の40%を変動費として
-    const monthlyExpenses = Math.round(baseExpenses + variableExpenses);
+    const monthlyExpenses = Math.min(MAX_MRR, Math.round(baseExpenses + variableExpenses));
     
-    // ターゲットレコードを追加
+    // デバッグログ
+    console.log(`Month ${i + 1} (${period}):`, {
+      newAcquisitions,
+      cumulativeCustomers,
+      mrr,
+      monthlyExpenses,
+      adjustedGrowthRate: adjustedGrowthRate.toFixed(2) + '%'
+    });
+    
+    // ターゲットレコードを追加（数値が安全な範囲内であることを確認）
     targets.push({
       period,
       metric_type: 'new_acquisitions',
-      target_value: newAcquisitions,
+      target_value: Math.min(newAcquisitions, MAX_MRR),
       created_at: now,
       updated_at: now,
       is_active: true
@@ -70,7 +88,7 @@ export function generateTargetsFromParameters(parameters: GrowthParametersInput)
     targets.push({
       period,
       metric_type: 'active_customers',
-      target_value: cumulativeCustomers,
+      target_value: Math.min(cumulativeCustomers, MAX_MRR),
       created_at: now,
       updated_at: now,
       is_active: true
@@ -79,7 +97,7 @@ export function generateTargetsFromParameters(parameters: GrowthParametersInput)
     targets.push({
       period,
       metric_type: 'mrr',
-      target_value: mrr,
+      target_value: Math.min(mrr, MAX_MRR),
       created_at: now,
       updated_at: now,
       is_active: true
@@ -88,7 +106,7 @@ export function generateTargetsFromParameters(parameters: GrowthParametersInput)
     targets.push({
       period,
       metric_type: 'monthly_expenses',
-      target_value: monthlyExpenses,
+      target_value: Math.min(monthlyExpenses, MAX_MRR),
       created_at: now,
       updated_at: now,
       is_active: true
@@ -97,7 +115,7 @@ export function generateTargetsFromParameters(parameters: GrowthParametersInput)
     targets.push({
       period,
       metric_type: 'churn_rate',
-      target_value: parameters.churn_rate,
+      target_value: Math.min(parameters.churn_rate, 100),
       created_at: now,
       updated_at: now,
       is_active: true
