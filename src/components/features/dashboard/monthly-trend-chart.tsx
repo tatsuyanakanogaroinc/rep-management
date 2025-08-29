@@ -20,6 +20,13 @@ export function MonthlyTrendChart({ currentMonth }: MonthlyTrendChartProps) {
   const [chartType, setChartType] = useState<ChartType>('revenue');
   const { data, isLoading } = useMonthlyTrends(currentMonth);
 
+  console.log('MonthlyTrendChart render:', { 
+    chartType, 
+    isLoading, 
+    hasData: !!data, 
+    dataKeys: data?.monthlyData?.length > 0 ? Object.keys(data.monthlyData[0]) : [] 
+  });
+
   if (isLoading || !data) {
     return (
       <Card className="glass">
@@ -163,6 +170,14 @@ export function MonthlyTrendChart({ currentMonth }: MonthlyTrendChartProps) {
   const currentDate = new Date();
   const selectedDate = new Date(currentMonth + '-01');
 
+  console.log('Chart config:', {
+    chartType,
+    configTitle: config.title,
+    dataLength: config.data?.length,
+    lines: config.lines,
+    sampleData: config.data?.slice(0, 2)
+  });
+
   return (
     <Card className="glass">
       <CardHeader>
@@ -178,7 +193,13 @@ export function MonthlyTrendChart({ currentMonth }: MonthlyTrendChartProps) {
             <Badge variant="outline" className="text-xs whitespace-nowrap">
               過去6ヶ月 + 未来6ヶ月
             </Badge>
-            <Select value={chartType} onValueChange={(value) => setChartType(value as ChartType)}>
+            <Select 
+              value={chartType} 
+              onValueChange={(value) => {
+                console.log('Chart type changed:', { from: chartType, to: value });
+                setChartType(value as ChartType);
+              }}
+            >
               <SelectTrigger className="w-full sm:w-48">
                 <SelectValue />
               </SelectTrigger>
@@ -197,6 +218,19 @@ export function MonthlyTrendChart({ currentMonth }: MonthlyTrendChartProps) {
         </div>
       </CardHeader>
       <CardContent>
+        {/* デバッグ情報表示 */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mb-4 p-2 bg-gray-100 text-xs rounded">
+            <strong>Debug Info:</strong> 
+            Chart: {chartType}, 
+            Data points: {config.data?.length || 0}, 
+            Lines: {config.lines?.length || 0}
+            {config.data?.length > 0 && (
+              <div>Sample keys: {Object.keys(config.data[0]).join(', ')}</div>
+            )}
+          </div>
+        )}
+        
         <div className="h-64 sm:h-80">
           <ResponsiveContainer width="100%" height="100%">
             {chartType === 'all' ? (
@@ -272,26 +306,26 @@ export function MonthlyTrendChart({ currentMonth }: MonthlyTrendChartProps) {
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend />
-                {config.lines.map((line) => (
-                  <Line
-                    key={line.key}
-                    type="monotone"
-                    dataKey={line.key}
-                    stroke={line.color}
-                    strokeWidth={2}
-                    strokeDasharray={line.strokeDasharray}
-                    dot={{ fill: line.color, r: 4 }}
-                    activeDot={{ r: 6 }}
-                    name={line.name}
-                  />
-                ))}
-                {/* 現在月を示す縦線 */}
-                <Line
-                  dataKey={() => null}
-                  stroke="#ef4444"
-                  strokeWidth={2}
-                  strokeDasharray="3 3"
-                />
+                {config.lines.map((line) => {
+                  console.log(`Rendering line: ${line.key} for chart: ${chartType}`, {
+                    lineConfig: line,
+                    dataHasKey: config.data?.[0]?.hasOwnProperty(line.key),
+                    sampleValue: config.data?.[0]?.[line.key as keyof typeof config.data[0]]
+                  });
+                  return (
+                    <Line
+                      key={line.key}
+                      type="monotone"
+                      dataKey={line.key}
+                      stroke={line.color}
+                      strokeWidth={2}
+                      strokeDasharray={line.strokeDasharray}
+                      dot={{ fill: line.color, r: 4 }}
+                      activeDot={{ r: 6 }}
+                      name={line.name}
+                    />
+                  );
+                })}
               </LineChart>
             )}
           </ResponsiveContainer>
