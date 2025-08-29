@@ -125,13 +125,22 @@ export default function DashboardPage() {
       href: '/targets',
       color: 'from-orange-500 to-red-500'
     },
-    ...(userProfile?.role === 'admin' ? [{
-      title: 'ユーザー管理',
-      description: '新規ユーザーの作成と管理',
-      icon: '👥',
-      href: '/user-management',
-      color: 'from-indigo-500 to-purple-500'
-    }] : [])
+    ...(userProfile?.role === 'admin' ? [
+      {
+        title: 'ユーザー管理',
+        description: '新規ユーザーの作成と管理',
+        icon: '👥',
+        href: '/user-management',
+        color: 'from-indigo-500 to-purple-500'
+      },
+      {
+        title: '成長パラメータ設定',
+        description: '事業成長の基本パラメータ設定',
+        icon: '📈',
+        href: '/settings/growth-parameters',
+        color: 'from-teal-500 to-green-500'
+      }
+    ] : [])
   ];
 
   return (
