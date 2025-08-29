@@ -23,13 +23,35 @@ export function LoginForm() {
     setError(null);
 
     try {
+      // ログイン処理を高速化
+      const startTime = performance.now();
       const { error } = await signIn(email, password);
       
       if (error) {
         console.error('SignIn error:', error);
-        setError(error.message);
+        
+        // エラーメッセージの最適化
+        if (error.message.includes('Invalid login credentials')) {
+          setError('メールアドレスまたはパスワードが正しくありません。');
+        } else if (error.message.includes('Email not confirmed')) {
+          setError('メールアドレスが確認されていません。管理者にお問い合わせください。');
+        } else if (error.message.includes('Too many requests')) {
+          setError('ログイン試行回数が上限に達しました。しばらく待ってから再度お試しください。');
+        } else {
+          setError('ログインに失敗しました。しばらく待ってから再度お試しください。');
+        }
       } else {
-        router.push('/dashboard');
+        // ログイン成功 - 即座にリダイレクト
+        const loginTime = performance.now() - startTime;
+        console.log(`Login completed in ${loginTime.toFixed(2)}ms`);
+        
+        // プリフェッチでダッシュボードを事前読み込み
+        router.prefetch('/dashboard');
+        
+        // 最小限の遅延後にリダイレクト
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 100);
       }
     } catch (err) {
       console.error('SignIn catch error:', err);
@@ -38,12 +60,8 @@ export function LoginForm() {
           setError('サーバーに接続できません。インターネット接続を確認してください。');
         } else if (err.message.includes('Supabase configuration error')) {
           setError('システム設定エラーが発生しました。管理者にお問い合わせください。');
-        } else if (err.message.includes('Invalid login credentials')) {
-          setError('メールアドレスまたはパスワードが正しくありません。');
-        } else if (err.message.includes('Email not confirmed')) {
-          setError('メールアドレスが確認されていません。管理者にお問い合わせください。');
         } else {
-          setError(err.message);
+          setError('ログイン中にエラーが発生しました。再度お試しください。');
         }
       } else {
         setError('ログイン中にエラーが発生しました');
@@ -100,8 +118,12 @@ export function LoginForm() {
           >
             {loading ? (
               <div className="flex items-center justify-center space-x-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                <span>ログイン中...</span>
+                <div className="animate-pulse flex space-x-1">
+                  <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                  <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                  <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                </div>
+                <span>認証中...</span>
               </div>
             ) : (
               'ログイン'

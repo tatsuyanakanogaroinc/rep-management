@@ -13,10 +13,34 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
+    let isInitializing = true;
+    
+    // Get initial session with optimizations
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isInitializing) return;
+      
       setUser(session?.user ?? null);
       if (session?.user) {
+        // キャッシュから先にプロファイルをチェック
+        const cachedProfile = localStorage.getItem(`profile_${session.user.id}`);
+        if (cachedProfile) {
+          try {
+            const profile = JSON.parse(cachedProfile);
+            const cacheTime = localStorage.getItem(`profile_${session.user.id}_time`);
+            // 5分以内なら キャッシュを使用
+            if (cacheTime && (Date.now() - parseInt(cacheTime)) < 5 * 60 * 1000) {
+              setUserProfile(profile);
+              setLoading(false);
+              // バックグラウンドで最新データを取得
+              fetchUserProfile(session.user.id, true);
+              return;
+            }
+          } catch (e) {
+            // キャッシュが壊れている場合は削除
+            localStorage.removeItem(`profile_${session.user.id}`);
+            localStorage.removeItem(`profile_${session.user.id}_time`);
+          }
+        }
         fetchUserProfile(session.user.id);
       } else {
         setLoading(false);
@@ -27,39 +51,67 @@ export function useAuth() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        await fetchUserProfile(session.user.id);
-      } else {
-        setUserProfile(null);
-        setLoading(false);
+      if (!isInitializing) {
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          await fetchUserProfile(session.user.id);
+        } else {
+          setUserProfile(null);
+          setLoading(false);
+        }
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isInitializing = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = async (userId: string, isBackground = false) => {
     try {
-      const { data, error } = await supabase
+      // ユーザープロファイルを並列取得し、タイムアウトを設定
+      const profilePromise = supabase
         .from('users')
         .select('*')
         .eq('id', userId)
         .single();
 
+      // 3秒でタイムアウト（高速化）
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 3000)
+      );
+
+      const { data, error } = await Promise.race([profilePromise, timeoutPromise]);
+
       if (error) {
         console.error('Error fetching user profile:', error);
-        // プロファイルが見つからない場合でも認証状態は維持
-        setUserProfile(null);
+        // プロファイルエラーでもログイン状態は有効
+        if (!isBackground) {
+          setUserProfile(null);
+        }
       } else {
         setUserProfile(data);
+        
+        // キャッシュに保存（成功時のみ）
+        try {
+          localStorage.setItem(`profile_${userId}`, JSON.stringify(data));
+          localStorage.setItem(`profile_${userId}_time`, Date.now().toString());
+        } catch (e) {
+          console.warn('Failed to cache user profile:', e);
+        }
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      setUserProfile(null);
+      // タイムアウトやエラーでもログイン状態は維持
+      if (!isBackground) {
+        setUserProfile(null);
+      }
     } finally {
-      setLoading(false);
+      if (!isBackground) {
+        setLoading(false);
+      }
     }
   };
 

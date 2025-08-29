@@ -38,13 +38,21 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     }
   }, [user, userProfile, loading, requiredRole, router]);
 
-  // ローディング中の場合のみ表示
+  // ローディング中の場合のみ表示（最適化されたローダー）
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-2 text-gray-600">読み込み中...</p>
+          <div className="relative">
+            <div className="w-12 h-12 rounded-full border-4 border-gray-200"></div>
+            <div className="absolute top-0 left-0 w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+          </div>
+          <p className="mt-4 text-gray-600 font-medium">システムを読み込んでいます...</p>
+          <div className="mt-2 flex justify-center space-x-1">
+            <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+            <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+            <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+          </div>
         </div>
       </div>
     );
