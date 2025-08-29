@@ -29,14 +29,24 @@ export function useGrowthParameters() {
   const parametersQuery = useQuery({
     queryKey: ['growth-parameters'],
     queryFn: async (): Promise<GrowthParameters> => {
-      const { data, error } = await supabase
+      console.log('GrowthParameters: Fetching parameters...');
+      
+      // タイムアウト付きでパラメータ取得（5秒）
+      const fetchPromise = supabase
         .from('growth_parameters')
         .select('*')
         .eq('is_active', true)
         .single();
 
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Growth parameters fetch timeout')), 5000)
+      );
+
+      const { data, error } = await Promise.race([fetchPromise, timeout]);
+
       if (error) {
         console.error('Failed to fetch growth parameters:', error);
+        console.log('GrowthParameters: Using default values');
         // デフォルト値を返す
         return {
           id: 1,
@@ -51,6 +61,8 @@ export function useGrowthParameters() {
         };
       }
 
+      console.log('GrowthParameters: Data fetched successfully:', data);
+
       return data;
     },
     staleTime: 5 * 60 * 1000, // 5分間キャッシュ
@@ -59,7 +71,10 @@ export function useGrowthParameters() {
   // パラメータ更新
   const updateParametersMutation = useMutation({
     mutationFn: async (parameters: GrowthParametersInput) => {
-      const { data, error } = await supabase
+      console.log('GrowthParameters: Updating parameters:', parameters);
+      
+      // タイムアウト付きで更新（8秒）
+      const updatePromise = supabase
         .from('growth_parameters')
         .update({
           ...parameters,
@@ -69,10 +84,18 @@ export function useGrowthParameters() {
         .select()
         .single();
 
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Parameters update timeout')), 8000)
+      );
+
+      const { data, error } = await Promise.race([updatePromise, timeout]);
+
       if (error) {
         // レコードが存在しない場合は挿入
         if (error.code === 'PGRST116') {
-          const { data: insertData, error: insertError } = await supabase
+          console.log('GrowthParameters: Record not found, inserting new one');
+          
+          const insertPromise = supabase
             .from('growth_parameters')
             .insert([{
               ...parameters,
@@ -81,12 +104,23 @@ export function useGrowthParameters() {
             .select()
             .single();
 
+          const insertTimeout = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Parameters insert timeout')), 5000)
+          );
+
+          const { data: insertData, error: insertError } = await Promise.race([
+            insertPromise,
+            insertTimeout
+          ]);
+
           if (insertError) throw insertError;
+          console.log('GrowthParameters: New record inserted successfully');
           return insertData;
         }
         throw error;
       }
 
+      console.log('GrowthParameters: Parameters updated successfully');
       return data;
     },
     onSuccess: () => {

@@ -34,10 +34,11 @@ export function generatePassword(): string {
  */
 export async function createUser(email: string, role: string = 'member') {
   try {
+    console.log('Creating user:', { email, role });
     const password = generatePassword();
     
-    // Supabaseでユーザーを作成
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // タイムアウト付きでユーザー作成（10秒）
+    const createUserPromise = supabase.auth.signUp({
       email,
       password,
       options: {
@@ -48,6 +49,15 @@ export async function createUser(email: string, role: string = 'member') {
       }
     });
 
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('ユーザー作成がタイムアウトしました')), 10000)
+    );
+
+    const { data: authData, error: authError } = await Promise.race([
+      createUserPromise,
+      timeout
+    ]);
+
     if (authError) {
       throw new Error(`認証エラー: ${authError.message}`);
     }
@@ -56,8 +66,8 @@ export async function createUser(email: string, role: string = 'member') {
       throw new Error('ユーザーの作成に失敗しました');
     }
 
-    // ユーザープロファイルを作成
-    const { error: profileError } = await supabase
+    // ユーザープロファイルを作成（タイムアウト付き）
+    const profilePromise = supabase
       .from('users')
       .insert({
         id: authData.user.id,
@@ -69,12 +79,25 @@ export async function createUser(email: string, role: string = 'member') {
         updated_at: new Date().toISOString()
       });
 
+    const profileTimeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('プロファイル作成がタイムアウトしました')), 5000)
+    );
+
+    const { error: profileError } = await Promise.race([
+      profilePromise,
+      profileTimeout
+    ]);
+
+    console.log('Profile creation result:', { error: profileError });
+
     if (profileError) {
       console.error('Profile creation error:', profileError);
       // 認証ユーザーの削除を試みる（ただし、Supabaseの制限により完全な削除は管理者権限が必要）
       throw new Error(`プロファイル作成エラー: ${profileError.message}`);
     }
 
+    console.log('User created successfully:', { email, role, userId: authData.user.id });
+    
     return {
       success: true,
       user: authData.user,
