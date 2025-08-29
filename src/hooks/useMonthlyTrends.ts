@@ -103,6 +103,13 @@ export function useMonthlyTrends(currentMonth: string, enabled: boolean = true) 
 
         const { data: targetsData } = targetsResult;
         const targets = targetsData || [];
+        
+        console.log('MonthlyTrends: Targets data received:', {
+          count: targets.length,
+          periods: [...new Set(targets.map(t => t.period))].sort(),
+          metrics: [...new Set(targets.map(t => t.metric_type))],
+          sampleTargets: targets.slice(0, 5)
+        });
 
         // 目標データをマップ化
         const targetsByMonth = targets.reduce((acc, target) => {
@@ -110,6 +117,28 @@ export function useMonthlyTrends(currentMonth: string, enabled: boolean = true) 
           acc[target.period][target.metric_type] = target.target_value;
           return acc;
         }, {} as Record<string, Record<string, number>>);
+        
+        console.log('MonthlyTrends: Targets by month:', targetsByMonth);
+
+        // フォールバック用のデフォルトターゲットデータ（スプレッドシートの値）
+        const fallbackTargets: Record<string, Record<string, number>> = {
+          '2025-09': { mrr: 69720, active_customers: 28, new_acquisitions: 30, churn_rate: 5.0, monthly_expenses: 845000 },
+          '2025-10': { mrr: 107070, active_customers: 43, new_acquisitions: 45, churn_rate: 5.0, monthly_expenses: 910000 },
+          '2025-11': { mrr: 161850, active_customers: 65, new_acquisitions: 68, churn_rate: 5.0, monthly_expenses: 946000 },
+          '2025-12': { mrr: 241530, active_customers: 97, new_acquisitions: 102, churn_rate: 5.0, monthly_expenses: 1036000 },
+          '2026-01': { mrr: 361050, active_customers: 145, new_acquisitions: 153, churn_rate: 5.0, monthly_expenses: 1117000 },
+          '2026-02': { mrr: 542820, active_customers: 218, new_acquisitions: 230, churn_rate: 5.0, monthly_expenses: 1235000 },
+          '2026-03': { mrr: 816720, active_customers: 328, new_acquisitions: 345, churn_rate: 5.0, monthly_expenses: 1454000 },
+          '2026-04': { mrr: 1225080, active_customers: 492, new_acquisitions: 518, churn_rate: 5.0, monthly_expenses: 1722000 },
+          '2026-05': { mrr: 1837620, active_customers: 738, new_acquisitions: 777, churn_rate: 5.0, monthly_expenses: 2120000 },
+          '2026-06': { mrr: 2758920, active_customers: 1108, new_acquisitions: 1166, churn_rate: 5.0, monthly_expenses: 2763000 },
+          '2026-07': { mrr: 4138380, active_customers: 1662, new_acquisitions: 1749, churn_rate: 5.0, monthly_expenses: 3666000 },
+          '2026-08': { mrr: 6207570, active_customers: 2493, new_acquisitions: 2624, churn_rate: 5.0, monthly_expenses: 5018000 }
+        };
+
+        // ターゲットデータが存在しない場合はフォールバックを使用
+        const mergedTargetsByMonth = { ...fallbackTargets, ...targetsByMonth };
+        console.log('MonthlyTrends: Merged targets (with fallback):', mergedTargetsByMonth);
 
         // 月次データを構築
         const monthlyData: MonthlyDataPoint[] = actualDataResults.map(({ month, customersData, expensesData }) => {
@@ -189,10 +218,10 @@ export function useMonthlyTrends(currentMonth: string, enabled: boolean = true) 
               sum + parseFloat(expense.amount), 0);
           }
 
-          // 目標データを取得
-          const monthTargets = targetsByMonth[month] || {};
-
-          return {
+          // 目標データを取得（フォールバック付き）
+          const monthTargets = mergedTargetsByMonth[month] || {};
+          
+          const result = {
             month,
             mrr,
             mrrTarget: monthTargets.mrr || 0,
@@ -207,6 +236,18 @@ export function useMonthlyTrends(currentMonth: string, enabled: boolean = true) 
             isFuture,
             isCurrentMonth
           };
+          
+          // デバッグ: 最初の数ヶ月のデータをログ出力
+          if (['2025-09', '2025-10', '2025-11'].includes(month)) {
+            console.log(`MonthlyTrends: Month ${month}:`, {
+              targets: monthTargets,
+              mrrTarget: result.mrrTarget,
+              activeCustomersTarget: result.activeCustomersTarget,
+              newAcquisitionsTarget: result.newAcquisitionsTarget
+            });
+          }
+
+          return result;
         });
 
         // サマリー統計を計算
@@ -257,22 +298,40 @@ export function useMonthlyTrends(currentMonth: string, enabled: boolean = true) 
       } catch (error) {
         console.error('MonthlyTrends: Fetch error:', error);
         
-        // フォールバックデータを返す
-        const fallbackMonths = months.map(month => ({
-          month,
-          mrr: 0,
-          mrrTarget: 0,
-          activeCustomers: 0,
-          activeCustomersTarget: 0,
-          newAcquisitions: 0,
-          newAcquisitionsTarget: 0,
-          churnRate: 0,
-          churnRateTarget: 0,
-          totalExpenses: 0,
-          monthlyExpensesTarget: 0,
-          isFuture: new Date(month + '-01') > new Date(),
-          isCurrentMonth: month === currentMonth
-        }));
+        // フォールバックデータを返す（スプレッドシートの目標値を使用）
+        const fallbackTargets: Record<string, Record<string, number>> = {
+          '2025-09': { mrr: 69720, active_customers: 28, new_acquisitions: 30, churn_rate: 5.0, monthly_expenses: 845000 },
+          '2025-10': { mrr: 107070, active_customers: 43, new_acquisitions: 45, churn_rate: 5.0, monthly_expenses: 910000 },
+          '2025-11': { mrr: 161850, active_customers: 65, new_acquisitions: 68, churn_rate: 5.0, monthly_expenses: 946000 },
+          '2025-12': { mrr: 241530, active_customers: 97, new_acquisitions: 102, churn_rate: 5.0, monthly_expenses: 1036000 },
+          '2026-01': { mrr: 361050, active_customers: 145, new_acquisitions: 153, churn_rate: 5.0, monthly_expenses: 1117000 },
+          '2026-02': { mrr: 542820, active_customers: 218, new_acquisitions: 230, churn_rate: 5.0, monthly_expenses: 1235000 },
+          '2026-03': { mrr: 816720, active_customers: 328, new_acquisitions: 345, churn_rate: 5.0, monthly_expenses: 1454000 },
+          '2026-04': { mrr: 1225080, active_customers: 492, new_acquisitions: 518, churn_rate: 5.0, monthly_expenses: 1722000 },
+          '2026-05': { mrr: 1837620, active_customers: 738, new_acquisitions: 777, churn_rate: 5.0, monthly_expenses: 2120000 },
+          '2026-06': { mrr: 2758920, active_customers: 1108, new_acquisitions: 1166, churn_rate: 5.0, monthly_expenses: 2763000 },
+          '2026-07': { mrr: 4138380, active_customers: 1662, new_acquisitions: 1749, churn_rate: 5.0, monthly_expenses: 3666000 },
+          '2026-08': { mrr: 6207570, active_customers: 2493, new_acquisitions: 2624, churn_rate: 5.0, monthly_expenses: 5018000 }
+        };
+
+        const fallbackMonths = months.map(month => {
+          const targets = fallbackTargets[month] || {};
+          return {
+            month,
+            mrr: 0,
+            mrrTarget: targets.mrr || 0,
+            activeCustomers: 0,
+            activeCustomersTarget: targets.active_customers || 0,
+            newAcquisitions: 0,
+            newAcquisitionsTarget: targets.new_acquisitions || 0,
+            churnRate: 0,
+            churnRateTarget: targets.churn_rate || 5,
+            totalExpenses: 0,
+            monthlyExpensesTarget: targets.monthly_expenses || 0,
+            isFuture: new Date(month + '-01') > new Date(),
+            isCurrentMonth: month === currentMonth
+          };
+        });
 
         return {
           monthlyData: fallbackMonths,
