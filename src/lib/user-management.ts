@@ -35,6 +35,22 @@ export function generatePassword(): string {
 export async function createUser(email: string, role: string = 'member') {
   try {
     console.log('Creating user:', { email, role });
+    
+    // まず既存ユーザーをチェック
+    const { data: existingUsers, error: checkError } = await supabase
+      .from('users')
+      .select('email')
+      .eq('email', email)
+      .limit(1);
+    
+    if (checkError) {
+      console.log('Check user error (proceeding):', checkError);
+    }
+    
+    if (existingUsers && existingUsers.length > 0) {
+      throw new Error(`ユーザー ${email} は既に存在します`);
+    }
+    
     const password = generatePassword();
     
     // タイムアウト付きでユーザー作成（10秒）
@@ -59,6 +75,10 @@ export async function createUser(email: string, role: string = 'member') {
     ]);
 
     if (authError) {
+      // 既に存在するユーザーの場合の処理
+      if (authError.message.includes('User already registered')) {
+        throw new Error(`ユーザー ${email} は既に登録されています`);
+      }
       throw new Error(`認証エラー: ${authError.message}`);
     }
 
@@ -66,10 +86,10 @@ export async function createUser(email: string, role: string = 'member') {
       throw new Error('ユーザーの作成に失敗しました');
     }
 
-    // ユーザープロファイルを作成（タイムアウト付き）
+    // ユーザープロファイルを作成（タイムアウト付き、upsert使用）
     const profilePromise = supabase
       .from('users')
-      .insert({
+      .upsert({
         id: authData.user.id,
         email: email,
         role: role,
@@ -77,6 +97,8 @@ export async function createUser(email: string, role: string = 'member') {
         is_active: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'id'
       });
 
     const profileTimeout = new Promise<never>((_, reject) =>
@@ -92,8 +114,29 @@ export async function createUser(email: string, role: string = 'member') {
 
     if (profileError) {
       console.error('Profile creation error:', profileError);
-      // 認証ユーザーの削除を試みる（ただし、Supabaseの制限により完全な削除は管理者権限が必要）
-      throw new Error(`プロファイル作成エラー: ${profileError.message}`);
+      
+      // 重複エラーの場合は既存プロファイルを更新
+      if (profileError.code === '23505' || profileError.message.includes('duplicate key')) {
+        console.log('Profile already exists, updating instead...');
+        
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
+            role: role,
+            name: email.split('@')[0],
+            is_active: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', authData.user.id);
+          
+        if (updateError) {
+          throw new Error(`プロファイル更新エラー: ${updateError.message}`);
+        }
+        
+        console.log('Profile updated successfully');
+      } else {
+        throw new Error(`プロファイル作成エラー: ${profileError.message}`);
+      }
     }
 
     console.log('User created successfully:', { email, role, userId: authData.user.id });
