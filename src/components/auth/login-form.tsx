@@ -45,13 +45,8 @@ export function LoginForm() {
         const loginTime = performance.now() - startTime;
         console.log(`Login completed in ${loginTime.toFixed(2)}ms`);
         
-        // プリフェッチでダッシュボードを事前読み込み
-        router.prefetch('/dashboard');
-        
-        // 最小限の遅延後にリダイレクト
-        setTimeout(() => {
-          router.push('/dashboard');
-        }, 100);
+        // 即座にリダイレクト（遅延なし）
+        router.push('/dashboard');
       }
     } catch (err) {
       console.error('SignIn catch error:', err);
