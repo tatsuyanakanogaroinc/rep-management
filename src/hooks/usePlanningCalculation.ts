@@ -88,8 +88,8 @@ export function usePlanningCalculation(
       const budget = customers * cpa;
       
       // LTV計算（簡易版）
-      const avgMonthlyRevenue = monthlyRevenue / targetNewCustomers;
-      const ltv = avgMonthlyRevenue / monthlyChurnRate || avgMonthlyRevenue * 12;
+      const avgMonthlyRevenuePerCustomer = targetNewCustomers > 0 ? monthlyRevenue / targetNewCustomers : 0;
+      const ltv = monthlyChurnRate > 0 ? avgMonthlyRevenuePerCustomer / monthlyChurnRate : avgMonthlyRevenuePerCustomer * 12;
       
       // ROI計算
       const roi = cpa > 0 ? (ltv / cpa) * 100 : 0;
@@ -109,12 +109,18 @@ export function usePlanningCalculation(
     const customerAcquisitionCost = targetNewCustomers > 0 ? totalMarketingBudget / targetNewCustomers : 0;
     
     // LTV/CAC比率
-    const avgLTV = monthlyRevenue * 12 / targetNewCustomers / monthlyChurnRate;
-    const ltvCacRatio = customerAcquisitionCost > 0 ? avgLTV / customerAcquisitionCost : 0;
+    const avgLTV = targetNewCustomers > 0 
+      ? (monthlyChurnRate > 0 
+        ? (monthlyRevenue * 12 / targetNewCustomers / monthlyChurnRate) 
+        : (monthlyRevenue * 12 / targetNewCustomers))
+      : 0;
+    const ltvCacRatio = customerAcquisitionCost > 0 && avgLTV > 0 ? avgLTV / customerAcquisitionCost : 0;
     
     // ペイバック期間（月）
-    const avgMonthlyRevenue = monthlyRevenue / targetNewCustomers;
-    const paybackPeriod = customerAcquisitionCost > 0 ? customerAcquisitionCost / avgMonthlyRevenue : 0;
+    const avgMonthlyRevenuePerCustomer = targetNewCustomers > 0 ? monthlyRevenue / targetNewCustomers : 0;
+    const paybackPeriod = customerAcquisitionCost > 0 && avgMonthlyRevenuePerCustomer > 0 
+      ? customerAcquisitionCost / avgMonthlyRevenuePerCustomer 
+      : 0;
 
     // 成長予測
     const projectedGrowth = {
