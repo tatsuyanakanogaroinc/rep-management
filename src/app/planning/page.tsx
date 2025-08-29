@@ -12,6 +12,8 @@ import { Calculator, TrendingUp, DollarSign, Users, Target, AlertCircle } from '
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthContext } from '@/lib/auth-context';
+import { usePlanningCalculation } from '@/hooks/usePlanningCalculation';
+import { PlanningResults } from '@/components/features/planning/planning-results';
 
 interface ServiceSetting {
   id: string;
@@ -22,22 +24,6 @@ interface ServiceSetting {
   description: string;
 }
 
-interface SimulationResult {
-  monthlyNewCustomers: number;
-  yearlyRevenue: number;
-  monthlyRevenue: number;
-  totalCustomers: number;
-  channelBreakdown: ChannelData[];
-  totalMarketingBudget: number;
-}
-
-interface ChannelData {
-  name: string;
-  percentage: number;
-  customers: number;
-  cpa: number;
-  budget: number;
-}
 
 export default function PlanningPage() {
   const { user } = useAuthContext();
@@ -66,7 +52,8 @@ export default function PlanningPage() {
     others: 4000
   });
 
-  const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
+  // 計算結果をリアルタイムで取得
+  const simulationResult = usePlanningCalculation(simulationParams, channelMix, channelCPA);
 
   // サービス設定取得
   const { data: serviceSettings } = useQuery({
@@ -99,47 +86,6 @@ export default function PlanningPage() {
     }
   }, [serviceSettings]);
 
-  // シミュレーション実行
-  const runSimulation = () => {
-    const channelData: ChannelData[] = Object.entries(channelMix).map(([channel, percentage]) => {
-      const customers = Math.round(simulationParams.targetNewCustomers * percentage / 100);
-      const cpa = channelCPA[channel as keyof typeof channelCPA];
-      const budget = customers * cpa;
-      
-      return {
-        name: getChannelName(channel),
-        percentage,
-        customers,
-        cpa,
-        budget
-      };
-    });
-
-    const totalMarketingBudget = channelData.reduce((sum, ch) => sum + ch.budget, 0);
-    
-    // 月次・年次収益計算
-    const monthlyCustomers = simulationParams.targetNewCustomers;
-    const yearlyCustomers = Math.round(monthlyCustomers * simulationParams.yearlyRatio / 100);
-    const monthlyOnlyCustomers = monthlyCustomers - yearlyCustomers;
-    
-    const monthlyRevenue = (monthlyOnlyCustomers * simulationParams.monthlyPrice) + 
-                          (yearlyCustomers * simulationParams.yearlyPrice / 12);
-    
-    const yearlyRevenue = monthlyRevenue * 12;
-    
-    // 累計顧客数（チャーンを考慮）
-    const monthlyChurnRate = simulationParams.churnRate / 100;
-    const totalCustomers = Math.round(monthlyCustomers / monthlyChurnRate);
-
-    setSimulationResult({
-      monthlyNewCustomers: monthlyCustomers,
-      yearlyRevenue,
-      monthlyRevenue,
-      totalCustomers,
-      channelBreakdown: channelData,
-      totalMarketingBudget
-    });
-  };
 
   const getChannelName = (key: string) => {
     const names: Record<string, string> = {
@@ -292,83 +238,33 @@ export default function PlanningPage() {
                 </CardContent>
               </Card>
 
-              <Button
-                onClick={runSimulation}
-                disabled={!isChannelMixValid}
-                className="w-full bg-gradient-to-r from-primary to-accent"
-              >
-                <Calculator className="w-4 h-4 mr-2" />
-                シミュレーション実行
-              </Button>
+              <div className="bg-white/50 p-4 rounded-lg">
+                <div className="text-sm text-muted-foreground mb-2">リアルタイム計算</div>
+                <div className="text-lg font-semibold">
+                  自動更新中 {isChannelMixValid ? '✓' : '⚠️'}
+                </div>
+                {!isChannelMixValid && (
+                  <div className="text-xs text-red-600 mt-1">
+                    チャネル割合を100%に調整してください
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* 右側：シミュレーション結果 */}
             <div className="space-y-6">
-              {simulationResult && (
-                <>
-                  <Card className="glass">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5" />
-                        シミュレーション結果
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <div className="text-sm text-muted-foreground">月間新規顧客</div>
-                          <div className="text-2xl font-bold">{simulationResult.monthlyNewCustomers}人</div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-muted-foreground">累計顧客数</div>
-                          <div className="text-2xl font-bold">{simulationResult.totalCustomers}人</div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-muted-foreground">月次収益</div>
-                          <div className="text-2xl font-bold">¥{Math.round(simulationResult.monthlyRevenue).toLocaleString()}</div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-muted-foreground">年間収益</div>
-                          <div className="text-2xl font-bold">¥{Math.round(simulationResult.yearlyRevenue).toLocaleString()}</div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="glass">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Users className="w-5 h-5" />
-                        流入経路別予算配分
-                      </CardTitle>
-                      <CardDescription>
-                        月間マーケティング予算: ¥{simulationResult.totalMarketingBudget.toLocaleString()}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {simulationResult.channelBreakdown.map((channel) => (
-                          <div key={channel.name} className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span>{channel.name}</span>
-                              <span className="font-semibold">¥{channel.budget.toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between text-xs text-muted-foreground">
-                              <span>{channel.customers}人 ({channel.percentage}%)</span>
-                              <span>CPA: ¥{channel.cpa.toLocaleString()}</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div 
-                                className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full"
-                                style={{ width: `${channel.percentage}%` }}
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </>
+              {isChannelMixValid ? (
+                <PlanningResults result={simulationResult} />
+              ) : (
+                <Card className="glass">
+                  <CardContent className="p-12 text-center">
+                    <AlertCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold mb-2">設定を完了してください</h3>
+                    <p className="text-muted-foreground">
+                      チャネル割合の合計を100%にすると、リアルタイムで結果が表示されます
+                    </p>
+                  </CardContent>
+                </Card>
               )}
             </div>
           </div>
