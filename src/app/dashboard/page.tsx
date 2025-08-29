@@ -95,7 +95,7 @@ export default function DashboardPage() {
     }
   ];
 
-  // よく使う機能を厳選して表示
+  // よく使う機能を厳選して表示（管理者には追加機能を表示）
   const quickActions = [
     {
       title: '日報を入力',
@@ -124,7 +124,14 @@ export default function DashboardPage() {
       icon: '🎯',
       href: '/targets',
       color: 'from-orange-500 to-red-500'
-    }
+    },
+    ...(userProfile?.role === 'admin' ? [{
+      title: 'ユーザー管理',
+      description: '新規ユーザーの作成と管理',
+      icon: '👥',
+      href: '/user-management',
+      color: 'from-indigo-500 to-purple-500'
+    }] : [])
   ];
 
   return (
