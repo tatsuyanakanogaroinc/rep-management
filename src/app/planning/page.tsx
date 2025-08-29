@@ -15,11 +15,7 @@ import { Calculator, TrendingUp, DollarSign, Users, Target, AlertCircle } from '
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthContext } from '@/lib/auth-context';
-import { usePlanningCalculation } from '@/hooks/usePlanningCalculation';
 import { useSettingsSync } from '@/hooks/useSettingsSync';
-
-// 動的インポートを使用せずに直接インポート
-import { PlanningResults } from '@/components/features/planning/planning-results';
 
 interface ServiceSetting {
   id: string;
@@ -30,10 +26,11 @@ interface ServiceSetting {
   description: string;
 }
 
-
 export default function PlanningPage() {
   const { user } = useAuthContext();
   const { syncPlanningSettings, syncChannelSettings, isUpdating } = useSettingsSync();
+  const [isMounted, setIsMounted] = useState(false);
+  
   const [simulationParams, setSimulationParams] = useState({
     targetNewCustomers: 100,
     conversionRate: 15,
@@ -59,20 +56,9 @@ export default function PlanningPage() {
     others: 4000
   });
 
-  // 計算結果をリアルタイムで取得
-  const simulationResult = usePlanningCalculation(simulationParams, channelMix, channelCPA);
-
-  // 自動保存（デバウンス付き）
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (user && isChannelMixValid) {
-        syncPlanningSettings(simulationParams).catch(console.error);
-        syncChannelSettings(channelMix, channelCPA).catch(console.error);
-      }
-    }, 1000); // 1秒後に保存
-
-    return () => clearTimeout(timer);
-  }, [simulationParams, channelMix, channelCPA, user, isChannelMixValid, syncPlanningSettings, syncChannelSettings]);
+    setIsMounted(true);
+  }, []);
 
   // サービス設定取得
   const { data: serviceSettings } = useQuery({
@@ -84,7 +70,8 @@ export default function PlanningPage() {
       
       if (error) throw error;
       return data as ServiceSetting[];
-    }
+    },
+    enabled: isMounted && !!user
   });
 
   // 設定値から初期パラメータを設定
@@ -105,6 +92,19 @@ export default function PlanningPage() {
     }
   }, [serviceSettings]);
 
+  // 自動保存（デバウンス付き）
+  useEffect(() => {
+    if (!isMounted) return;
+    
+    const timer = setTimeout(() => {
+      if (user) {
+        syncPlanningSettings(simulationParams).catch(console.error);
+        syncChannelSettings(channelMix, channelCPA).catch(console.error);
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [simulationParams, channelMix, channelCPA, user, isMounted, syncPlanningSettings, syncChannelSettings]);
 
   const getChannelName = (key: string) => {
     const names: Record<string, string> = {
@@ -120,6 +120,25 @@ export default function PlanningPage() {
   // チャネル割合の合計をチェック
   const totalChannelPercentage = Object.values(channelMix).reduce((sum, val) => sum + val, 0);
   const isChannelMixValid = totalChannelPercentage === 100;
+
+  // 簡易計算結果
+  const calculatedResults = isMounted ? {
+    monthlyRevenue: simulationParams.targetNewCustomers * simulationParams.monthlyPrice * 0.7,
+    totalMarketingBudget: Object.entries(channelMix).reduce((sum, [key, percentage]) => {
+      const customers = Math.round(simulationParams.targetNewCustomers * percentage / 100);
+      const cpa = channelCPA[key as keyof typeof channelCPA];
+      return sum + (customers * cpa);
+    }, 0),
+    projectedCustomers: Math.round(simulationParams.targetNewCustomers / (simulationParams.churnRate / 100))
+  } : null;
+
+  if (!isMounted) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <ProtectedRoute>
@@ -275,19 +294,80 @@ export default function PlanningPage() {
               </div>
             </div>
 
-            {/* 右側：シミュレーション結果 */}
+            {/* 右側：簡易結果表示 */}
             <div className="space-y-6">
-              {typeof window !== 'undefined' && isChannelMixValid ? (
-                <PlanningResults result={simulationResult} />
+              {isChannelMixValid && calculatedResults ? (
+                <>
+                  <Card className="glass">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <TrendingUp className="w-5 h-5" />
+                        計算結果
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">
+                            ¥{calculatedResults.monthlyRevenue.toLocaleString()}
+                          </div>
+                          <div className="text-sm text-muted-foreground">予想月次売上</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-600">
+                            ¥{calculatedResults.totalMarketingBudget.toLocaleString()}
+                          </div>
+                          <div className="text-sm text-muted-foreground">月間マーケティング予算</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-purple-600">
+                            {calculatedResults.projectedCustomers}人
+                          </div>
+                          <div className="text-sm text-muted-foreground">予想累計顧客数</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="glass">
+                    <CardHeader>
+                      <CardTitle>チャネル別予算</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {Object.entries(channelMix).map(([key, percentage]) => {
+                          const customers = Math.round(simulationParams.targetNewCustomers * percentage / 100);
+                          const cpa = channelCPA[key as keyof typeof channelCPA];
+                          const budget = customers * cpa;
+                          
+                          return (
+                            <div key={key} className="flex justify-between items-center p-3 bg-white/50 rounded-lg">
+                              <div>
+                                <div className="font-medium">{getChannelName(key)}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {customers}人 ({percentage}%)
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="font-semibold">¥{budget.toLocaleString()}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  CPA: ¥{cpa.toLocaleString()}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
               ) : (
                 <Card className="glass">
                   <CardContent className="p-12 text-center">
                     <AlertCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
                     <h3 className="text-lg font-semibold mb-2">設定を完了してください</h3>
                     <p className="text-muted-foreground">
-                      {typeof window === 'undefined' 
-                        ? '読み込み中...'
-                        : 'チャネル割合の合計を100%にすると、リアルタイムで結果が表示されます'}
+                      チャネル割合の合計を100%にすると、リアルタイムで結果が表示されます
                     </p>
                   </CardContent>
                 </Card>
