@@ -16,9 +16,9 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthContext } from '@/lib/auth-context';
 import { usePlanningCalculation } from '@/hooks/usePlanningCalculation';
-import dynamic from 'next/dynamic';
+import dynamicImport from 'next/dynamic';
 
-const PlanningResults = dynamic(() => import('@/components/features/planning/planning-results').then(mod => ({ default: mod.PlanningResults })), {
+const PlanningResults = dynamicImport(() => import('@/components/features/planning/planning-results').then(mod => ({ default: mod.PlanningResults })), {
   ssr: false,
   loading: () => (
     <div className="flex justify-center items-center py-12">
