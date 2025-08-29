@@ -148,6 +148,13 @@ export default function DashboardPage() {
       icon: '👥',
       href: '/cohort-analysis',
       color: 'from-purple-500 to-indigo-500'
+    },
+    {
+      title: '計画シミュレーション',
+      description: '事業計画と予算配分の最適化',
+      icon: '📊',
+      href: '/planning',
+      color: 'from-emerald-500 to-teal-500'
     }
   ];
 
