@@ -179,8 +179,8 @@ export function MonthlyTrendChart({ currentMonth }: MonthlyTrendChartProps) {
   });
 
   return (
-    <Card className="glass">
-      <CardHeader>
+    <Card className="glass relative z-10">
+      <CardHeader className="relative z-20">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
           <div className="flex items-center gap-3">
             {config.icon}
@@ -189,31 +189,77 @@ export function MonthlyTrendChart({ currentMonth }: MonthlyTrendChartProps) {
               <CardDescription className="text-sm">{config.description}</CardDescription>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 relative">
             <Badge variant="outline" className="text-xs whitespace-nowrap">
               過去6ヶ月 + 未来6ヶ月
             </Badge>
-            <Select 
-              value={chartType} 
-              onValueChange={(value) => {
-                console.log('Chart type changed:', { from: chartType, to: value });
-                setChartType(value as ChartType);
-              }}
-            >
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="revenue">💰 収益推移</SelectItem>
-                <SelectItem value="customers">👥 顧客数推移</SelectItem>
-                <SelectItem value="acquisition">🎯 新規獲得推移</SelectItem>
-                <SelectItem value="churn">📉 チャーン率推移</SelectItem>
-                <SelectItem value="expenses">💳 支出推移</SelectItem>
-                <SelectItem value="profitability">📊 収益性分析</SelectItem>
-                <SelectItem value="growth">📈 成長率推移</SelectItem>
-                <SelectItem value="all">🔄 統合ビュー</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="relative w-full sm:w-48">
+              <Select 
+                value={chartType} 
+                onValueChange={(value) => {
+                  console.log('Chart type changed:', { from: chartType, to: value });
+                  setChartType(value as ChartType);
+                }}
+              >
+                <SelectTrigger className="w-full bg-white hover:bg-gray-50 transition-colors duration-200 cursor-pointer border-2 hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20">
+                  <SelectValue placeholder="チャート種別を選択" />
+                </SelectTrigger>
+                <SelectContent 
+                  className="z-50 bg-white border-2 shadow-lg max-h-64 overflow-auto"
+                  position="popper"
+                  sideOffset={4}
+                >
+                  <SelectItem 
+                    value="revenue" 
+                    className="cursor-pointer hover:bg-primary/10 focus:bg-primary/10 py-3 px-4"
+                  >
+                    💰 収益推移
+                  </SelectItem>
+                  <SelectItem 
+                    value="customers" 
+                    className="cursor-pointer hover:bg-primary/10 focus:bg-primary/10 py-3 px-4"
+                  >
+                    👥 顧客数推移
+                  </SelectItem>
+                  <SelectItem 
+                    value="acquisition" 
+                    className="cursor-pointer hover:bg-primary/10 focus:bg-primary/10 py-3 px-4"
+                  >
+                    🎯 新規獲得推移
+                  </SelectItem>
+                  <SelectItem 
+                    value="churn" 
+                    className="cursor-pointer hover:bg-primary/10 focus:bg-primary/10 py-3 px-4"
+                  >
+                    📉 チャーン率推移
+                  </SelectItem>
+                  <SelectItem 
+                    value="expenses" 
+                    className="cursor-pointer hover:bg-primary/10 focus:bg-primary/10 py-3 px-4"
+                  >
+                    💳 支出推移
+                  </SelectItem>
+                  <SelectItem 
+                    value="profitability" 
+                    className="cursor-pointer hover:bg-primary/10 focus:bg-primary/10 py-3 px-4"
+                  >
+                    📊 収益性分析
+                  </SelectItem>
+                  <SelectItem 
+                    value="growth" 
+                    className="cursor-pointer hover:bg-primary/10 focus:bg-primary/10 py-3 px-4"
+                  >
+                    📈 成長率推移
+                  </SelectItem>
+                  <SelectItem 
+                    value="all" 
+                    className="cursor-pointer hover:bg-primary/10 focus:bg-primary/10 py-3 px-4"
+                  >
+                    🔄 統合ビュー
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
       </CardHeader>

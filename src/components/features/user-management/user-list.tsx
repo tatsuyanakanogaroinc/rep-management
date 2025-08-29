@@ -235,9 +235,15 @@ export function UserList({ users, isLoading }: UserListProps) {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleDeleteClick(user, 'deactivate')}
-                            className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              console.log('Deactivate button clicked for:', user.email);
+                              handleDeleteClick(user, 'deactivate');
+                            }}
+                            className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 active:bg-orange-100 transition-all duration-200 cursor-pointer"
                             disabled={deactivateMutation.isPending}
+                            type="button"
                           >
                             <UserMinus className="w-4 h-4" />
                           </Button>
@@ -245,9 +251,15 @@ export function UserList({ users, isLoading }: UserListProps) {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDeleteClick(user, 'delete')}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.log('Delete button clicked for:', user.email);
+                            handleDeleteClick(user, 'delete');
+                          }}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 active:bg-red-100 transition-all duration-200 cursor-pointer"
                           disabled={deleteMutation.isPending}
+                          type="button"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -330,14 +342,29 @@ export function UserList({ users, isLoading }: UserListProps) {
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button 
+              variant="outline" 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDeleteDialogOpen(false);
+              }}
+              type="button"
+              className="cursor-pointer"
+            >
               キャンセル
             </Button>
             <Button
               variant={actionType === 'delete' ? 'destructive' : 'default'}
-              onClick={handleConfirmAction}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Confirm action button clicked:', actionType);
+                handleConfirmAction();
+              }}
               disabled={deleteMutation.isPending || deactivateMutation.isPending}
-              className={actionType === 'deactivate' ? 'bg-orange-600 hover:bg-orange-700' : ''}
+              className={`cursor-pointer ${actionType === 'deactivate' ? 'bg-orange-600 hover:bg-orange-700' : ''}`}
+              type="button"
             >
               {deleteMutation.isPending || deactivateMutation.isPending ? (
                 <div className="flex items-center gap-2">
