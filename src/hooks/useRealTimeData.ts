@@ -86,8 +86,8 @@ export function useRealTimeData(period: string, enabled: boolean = true) {
         });
 
         const monthlyRevenue = activeCustomersList.reduce((sum, customer) => {
-          if (customer.plan_type === 'monthly') return sum + 4980;
-          if (customer.plan_type === 'yearly') return sum + 4150; // 年額を月割り
+          if (customer.plan_type === 'monthly') return sum + 4980; // スプレッドシートベース
+          if (customer.plan_type === 'yearly') return sum + 4150; // 年額49,800円を月割り
           return sum;
         }, 0);
 

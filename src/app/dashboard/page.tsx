@@ -42,11 +42,12 @@ export default function DashboardPage() {
 
   const monthOptions = generateMonthOptions();
 
+  // スプレッドシートベースの目標値との差異を表示
   const progressMetrics = [
     {
       title: 'MRR',
       value: isLoading ? '¥-' : `¥${dashboardData?.mrr?.toLocaleString() || 0}`,
-      target: dashboardData?.mrrTarget,
+      target: dashboardData?.mrrTarget, // スプレッドシート目標: ¥2,205,000
       actual: dashboardData?.mrr || 0,
       progress: dashboardData?.mrrProgress || 0,
       difference: dashboardData?.mrrDifference || 0,
@@ -58,7 +59,7 @@ export default function DashboardPage() {
     {
       title: '有料会員数',
       value: isLoading ? '-' : (dashboardData?.activeCustomers || 0).toString(),
-      target: dashboardData?.activeCustomersTarget,
+      target: dashboardData?.activeCustomersTarget, // スプレッドシート目標: 450人
       actual: dashboardData?.activeCustomers || 0,
       progress: dashboardData?.activeCustomersProgress || 0,
       difference: dashboardData?.activeCustomersDifference || 0,
@@ -70,7 +71,7 @@ export default function DashboardPage() {
     {
       title: '新規獲得',
       value: isLoading ? '-' : (dashboardData?.newAcquisitions || 0).toString(),
-      target: dashboardData?.newAcquisitionsTarget,
+      target: dashboardData?.newAcquisitionsTarget, // スプレッドシート目標: 150人
       actual: dashboardData?.newAcquisitions || 0,
       progress: dashboardData?.newAcquisitionsProgress || 0,
       difference: dashboardData?.newAcquisitionsDifference || 0,
@@ -81,7 +82,7 @@ export default function DashboardPage() {
     {
       title: 'チャーン率',
       value: isLoading ? '-%' : `${dashboardData?.churnRate || 0}%`,
-      target: dashboardData?.churnRateTarget,
+      target: dashboardData?.churnRateTarget, // スプレッドシート目標: 3.5%
       actual: dashboardData?.churnRate || 0,
       progress: dashboardData?.churnRateProgress || 0,
       difference: dashboardData?.churnRateDifference || 0,

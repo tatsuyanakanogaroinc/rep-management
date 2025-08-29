@@ -32,28 +32,28 @@ export default function PlanningPage() {
   const [isMounted, setIsMounted] = useState(false);
   
   const [simulationParams, setSimulationParams] = useState({
-    targetNewCustomers: 100,
-    conversionRate: 15,
+    targetNewCustomers: 150, // スプレッドシートベース
+    conversionRate: 18, // スプレッドシートベース: 18%
     monthlyPrice: 4980,
     yearlyPrice: 49800,
-    yearlyRatio: 30,
-    churnRate: 5
+    yearlyRatio: 25, // スプレッドシートベース: 25%
+    churnRate: 3.5 // スプレッドシートベース: 3.5%
   });
 
   const [channelMix, setChannelMix] = useState({
-    google: 30,
-    facebook: 25,
-    referral: 20,
-    organic: 15,
-    others: 10
+    google: 30, // Google広告: 30% (45人)
+    facebook: 25, // Facebook広告: 25% (38人)
+    instagram: 20, // Instagram広告: 20% (30人)
+    referral: 15, // 紹介: 15% (22人)
+    organic: 10 // オーガニック検索: 10% (15人)
   });
 
   const [channelCPA, setChannelCPA] = useState({
-    google: 6000,
-    facebook: 5500,
-    referral: 0,
-    organic: 0,
-    others: 4000
+    google: 6000, // Google広告: 6,000円
+    facebook: 5500, // Facebook広告: 5,500円
+    instagram: 5000, // Instagram広告: 5,000円
+    referral: 0, // 紹介: コストなし
+    organic: 0 // オーガニック検索: コストなし
   });
 
   useEffect(() => {
@@ -110,8 +110,9 @@ export default function PlanningPage() {
     const names: Record<string, string> = {
       google: 'Google広告',
       facebook: 'Facebook広告',
+      instagram: 'Instagram広告',
       referral: '紹介',
-      organic: 'オーガニック',
+      organic: 'オーガニック検索',
       others: 'その他'
     };
     return names[key] || key;

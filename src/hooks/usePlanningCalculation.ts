@@ -61,21 +61,21 @@ export function usePlanningCalculation(
       churnRate
     } = params;
 
-    // トライアルユーザー数計算
+    // トライアルユーザー数計算（スプレッドシートベース: 18%転換率）
     const trialUsers = Math.round(targetNewCustomers / (conversionRate / 100));
 
-    // 年次・月次顧客の内訳
+    // 年次・月次顧客の内訳（スプレッドシートベース: 年額25%）
     const yearlyCustomers = Math.round(targetNewCustomers * (yearlyRatio / 100));
     const monthlyOnlyCustomers = targetNewCustomers - yearlyCustomers;
 
-    // 収益計算
+    // 収益計算（スプレッドシートベース: 月額4,980円、年額49,800円）
     const monthlyRevenue = 
       (monthlyOnlyCustomers * monthlyPrice) + 
-      (yearlyCustomers * yearlyPrice / 12);
+      (yearlyCustomers * (yearlyPrice / 12));
     
     const yearlyRevenue = monthlyRevenue * 12;
 
-    // チャーンを考慮した累計顧客数
+    // チャーンを考慮した累計顧客数（スプレッドシートベース: 3.5%チャーン率）
     const monthlyChurnRate = churnRate / 100;
     const totalCustomers = monthlyChurnRate > 0 
       ? Math.round(targetNewCustomers / monthlyChurnRate) 

@@ -111,14 +111,14 @@ export function useDashboardWithTargets(selectedMonth: string, enabled: boolean 
       const totalExpenses = expensesData?.reduce((sum, exp) => sum + parseFloat(exp.amount), 0) || 0;
       const monthlyReports = reportsData?.length || 0;
 
-      // MRR計算
+      // MRR計算（スプレッドシートベース: 月額4,980円、年額49,800円→月割り4,150円）
       const monthlyCustomers = activeCustomersData?.filter(c => c.plan_type === 'monthly').length || 0;
       const yearlyCustomers = activeCustomersData?.filter(c => c.plan_type === 'yearly').length || 0;
-      const mrr = (monthlyCustomers * 5000) + (yearlyCustomers * 4000);
+      const mrr = (monthlyCustomers * 4980) + (yearlyCustomers * 4150);
 
       const prevMonthlyCustomers = prevActiveCustomersData?.filter((c: any) => c.plan_type === 'monthly').length || 0;
       const prevYearlyCustomers = prevActiveCustomersData?.filter((c: any) => c.plan_type === 'yearly').length || 0;
-      const prevMrr = (prevMonthlyCustomers * 5000) + (prevYearlyCustomers * 4000);
+      const prevMrr = (prevMonthlyCustomers * 4980) + (prevYearlyCustomers * 4150);
 
       // チャーン率計算
       const churnRate = prevActiveCustomers > 0 ? Math.round((churns / prevActiveCustomers) * 100) : 0;
