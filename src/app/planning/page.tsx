@@ -1,5 +1,8 @@
 'use client';
 
+// SSG無効化
+export const dynamic = 'force-dynamic';
+
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
