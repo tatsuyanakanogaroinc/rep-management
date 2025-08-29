@@ -53,14 +53,24 @@ export function UserList({ users, isLoading }: UserListProps) {
   // ユーザー削除mutation
   const deleteMutation = useMutation({
     mutationFn: async ({ userId, email }: { userId: string; email: string }) => {
-      return await deleteUser(userId, email);
+      console.log('=== MUTATION: Starting deleteUser function ===');
+      const result = await deleteUser(userId, email);
+      console.log('=== MUTATION: deleteUser result ===', result);
+      return result;
     },
     onSuccess: (result) => {
+      console.log('=== MUTATION: onSuccess callback ===', result);
       if (result.success) {
+        console.log('Invalidating queries and closing dialog...');
         queryClient.invalidateQueries({ queryKey: ['user-list'] });
         setDeleteDialogOpen(false);
         setSelectedUser(null);
+      } else {
+        console.error('Delete result shows failure:', result);
       }
+    },
+    onError: (error) => {
+      console.error('=== MUTATION: onError callback ===', error);
     },
   });
 
@@ -87,12 +97,18 @@ export function UserList({ users, isLoading }: UserListProps) {
   const handleConfirmAction = () => {
     if (!selectedUser) return;
 
+    console.log('=== USER DELETION INITIATED FROM UI ===');
+    console.log('Action type:', actionType);
+    console.log('Target user:', selectedUser);
+
     if (actionType === 'delete') {
+      console.log('Starting delete mutation...');
       deleteMutation.mutate({
         userId: selectedUser.id,
         email: selectedUser.email
       });
     } else {
+      console.log('Starting deactivate mutation...');
       deactivateMutation.mutate({
         userId: selectedUser.id,
         email: selectedUser.email

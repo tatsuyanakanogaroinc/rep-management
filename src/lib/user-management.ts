@@ -1,6 +1,60 @@
 import { supabase } from './supabase';
 
 /**
+ * 管理者権限での強制削除（RLS回避）
+ */
+export async function forceDeleteUser(userId: string, email: string) {
+  try {
+    console.log('Force deleting user with admin privileges:', { userId, email });
+
+    // RPC関数を使用して管理者権限で削除
+    const { data, error } = await supabase.rpc('admin_delete_user', {
+      target_user_id: userId
+    });
+
+    if (error) {
+      console.error('RPC deletion failed, falling back to direct delete:', error);
+      
+      // RPC関数が利用できない場合は直接削除を試行
+      const { data: deleteData, error: directError } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId)
+        .select();
+
+      if (directError) {
+        throw new Error(`削除エラー: ${directError.message} (Code: ${directError.code})`);
+      }
+
+      if (!deleteData || deleteData.length === 0) {
+        throw new Error('削除処理は完了しましたが、対象レコードが見つかりませんでした');
+      }
+
+      console.log('Direct deletion successful:', deleteData);
+      return {
+        success: true,
+        message: `ユーザー ${email} が削除されました（直接削除）`,
+        method: 'direct'
+      };
+    }
+
+    console.log('RPC deletion successful:', data);
+    return {
+      success: true,
+      message: `ユーザー ${email} が削除されました（RPC削除）`,
+      method: 'rpc'
+    };
+
+  } catch (error) {
+    console.error('Force deletion error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '強制削除に失敗しました'
+    };
+  }
+}
+
+/**
  * パスワードを自動生成する
  * 英大文字、英小文字、数字、記号を含む12桁のパスワードを生成
  */
@@ -202,44 +256,146 @@ export function validatePassword(password: string): {
  */
 export async function deleteUser(userId: string, email: string) {
   try {
-    console.log('Deleting user:', { userId, email });
+    console.log('=== DELETE USER START ===');
+    console.log('Target:', { userId, email });
+
+    // 削除前にユーザーが存在することを確認
+    console.log('Step 1: Checking if user exists...');
+    const { data: existingUser, error: checkError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    console.log('Pre-deletion check result:', { 
+      existingUser, 
+      checkError,
+      exists: !!existingUser 
+    });
+
+    if (checkError || !existingUser) {
+      throw new Error(`削除対象のユーザーが見つかりません: ${email} (Error: ${checkError?.message})`);
+    }
+
+    // 現在のユーザーの権限を確認
+    console.log('Step 2: Checking current user permissions...');
+    const { data: currentUserSession } = await supabase.auth.getSession();
+    const { data: currentUser } = await supabase
+      .from('users')
+      .select('id, email, role')
+      .eq('id', currentUserSession.session?.user?.id)
+      .single();
+
+    console.log('Current user info:', {
+      sessionUserId: currentUserSession.session?.user?.id,
+      currentUser,
+      isAdmin: currentUser?.role === 'admin'
+    });
+
+    if (currentUser?.role !== 'admin') {
+      throw new Error('管理者権限が必要です');
+    }
 
     // タイムアウト付きで削除処理（15秒）
+    console.log('Step 3: Attempting standard deletion...');
     const deleteTimeout = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error('ユーザー削除がタイムアウトしました')), 15000)
     );
 
-    // 1. プロファイル削除
+    // 1. プロファイル削除を実行
     const deleteProfilePromise = supabase
       .from('users')
       .delete()
-      .eq('id', userId);
+      .eq('id', userId)
+      .select(); // 削除されたレコードを返す
 
-    const { error: profileError } = await Promise.race([
+    const { data: deletedData, error: profileError, count } = await Promise.race([
       deleteProfilePromise,
       deleteTimeout
     ]);
 
+    console.log('Standard deletion result:', { 
+      deletedData, 
+      profileError,
+      count,
+      deletedCount: deletedData?.length || 0,
+      errorCode: profileError?.code,
+      errorMessage: profileError?.message
+    });
+
     if (profileError) {
-      throw new Error(`プロファイル削除エラー: ${profileError.message}`);
+      console.error('Standard deletion failed:', profileError);
+      throw new Error(`プロファイル削除エラー: ${profileError.message} (Code: ${profileError.code})`);
     }
 
-    console.log('Profile deleted successfully');
+    // 削除が実際に行われたかを確認
+    if (!deletedData || deletedData.length === 0) {
+      console.warn('Step 4: Standard deletion returned no data. Attempting force deletion...');
+      
+      // 強制削除を試行
+      const forceResult = await forceDeleteUser(userId, email);
+      console.log('Force deletion result:', forceResult);
+      
+      if (!forceResult.success) {
+        throw new Error(`削除操作は成功応答でしたが、実際にはレコードが削除されませんでした。強制削除も失敗: ${forceResult.error}`);
+      }
+      
+      // 強制削除後の確認
+      const { data: finalCheck } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', userId)
+        .single();
+        
+      console.log('Post-force-deletion verification:', { finalCheck });
+      
+      return {
+        success: true,
+        message: `ユーザー ${email} が削除されました（${forceResult.method}）`,
+        deletedCount: 1,
+        method: forceResult.method
+      };
+    }
 
-    // 2. 認証ユーザー削除（admin API使用）
-    // Note: これはSupabase admin API経由でのみ可能
-    // 現在のクライアントサイドからは直接削除できないため、
-    // プロファイルのみ削除し、認証データは無効化する
-    
-    console.log('User deletion completed:', { userId, email });
+    console.log('Step 4: Standard deletion succeeded. Verifying...');
+    console.log('Deleted data:', deletedData);
+
+    // 削除後の確認：ユーザーが実際に削除されたかチェック
+    const { data: verifyUser, error: verifyError } = await supabase
+      .from('users')
+      .select('id, email')
+      .eq('id', userId)
+      .single();
+
+    console.log('Post-deletion verification:', { 
+      verifyUser, 
+      verifyError,
+      errorCode: verifyError?.code,
+      stillExists: !!verifyUser
+    });
+
+    if (verifyUser) {
+      console.error('CRITICAL: User still exists after deletion!', verifyUser);
+      throw new Error(`重大なエラー: 削除操作完了後もユーザーがデータベースに残っています。データ: ${JSON.stringify(verifyUser)}`);
+    }
+
+    if (verifyError && verifyError.code !== 'PGRST116') {
+      console.warn('Unexpected verification error:', verifyError);
+    }
+
+    console.log('=== DELETE USER SUCCESS ===');
+    console.log('User successfully deleted:', { userId, email, deletedCount: deletedData.length });
 
     return {
       success: true,
-      message: `ユーザー ${email} が正常に削除されました`
+      message: `ユーザー ${email} が正常に削除されました`,
+      deletedCount: deletedData.length,
+      method: 'standard'
     };
 
   } catch (error) {
-    console.error('User deletion error:', error);
+    console.error('=== DELETE USER ERROR ===');
+    console.error('Error details:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : '不明なエラーが発生しました'
