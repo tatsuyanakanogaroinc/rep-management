@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { TrendingUp, TrendingDown, DollarSign, Users, Target, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface PlanningResult {
   monthlyNewCustomers: number;
@@ -39,6 +40,12 @@ interface PlanningResultsProps {
 }
 
 export function PlanningResults({ result }: PlanningResultsProps) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const getHealthIndicator = (ltvCacRatio: number) => {
     if (ltvCacRatio >= 3) {
       return { icon: CheckCircle, color: 'text-green-600', message: '健全' };
@@ -48,6 +55,14 @@ export function PlanningResults({ result }: PlanningResultsProps) {
       return { icon: AlertCircle, color: 'text-red-600', message: '危険' };
     }
   };
+
+  if (!isMounted) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   const healthIndicator = getHealthIndicator(result.ltvCacRatio);
   const HealthIcon = healthIndicator.icon;

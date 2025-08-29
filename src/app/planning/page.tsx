@@ -16,17 +16,10 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthContext } from '@/lib/auth-context';
 import { usePlanningCalculation } from '@/hooks/usePlanningCalculation';
-import dynamicImport from 'next/dynamic';
-
-const PlanningResults = dynamicImport(() => import('@/components/features/planning/planning-results').then(mod => ({ default: mod.PlanningResults })), {
-  ssr: false,
-  loading: () => (
-    <div className="flex justify-center items-center py-12">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-    </div>
-  )
-});
 import { useSettingsSync } from '@/hooks/useSettingsSync';
+
+// 動的インポートを使用せずに直接インポート
+import { PlanningResults } from '@/components/features/planning/planning-results';
 
 interface ServiceSetting {
   id: string;
@@ -284,7 +277,7 @@ export default function PlanningPage() {
 
             {/* 右側：シミュレーション結果 */}
             <div className="space-y-6">
-              {isChannelMixValid ? (
+              {typeof window !== 'undefined' && isChannelMixValid ? (
                 <PlanningResults result={simulationResult} />
               ) : (
                 <Card className="glass">
@@ -292,7 +285,9 @@ export default function PlanningPage() {
                     <AlertCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
                     <h3 className="text-lg font-semibold mb-2">設定を完了してください</h3>
                     <p className="text-muted-foreground">
-                      チャネル割合の合計を100%にすると、リアルタイムで結果が表示されます
+                      {typeof window === 'undefined' 
+                        ? '読み込み中...'
+                        : 'チャネル割合の合計を100%にすると、リアルタイムで結果が表示されます'}
                     </p>
                   </CardContent>
                 </Card>
