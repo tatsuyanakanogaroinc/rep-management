@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useDashboardWithTargets } from '@/hooks/useDashboardWithTargets';
 import { ProgressCard } from '@/components/ui/progress-card';
 import { AIPredictionsCard } from '@/components/features/ai/ai-predictions-card';
+import { MonthlyTargetComparison } from '@/components/features/dashboard/monthly-target-comparison';
 import Link from 'next/link';
 import { useState } from 'react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
@@ -93,6 +94,7 @@ export default function DashboardPage() {
     }
   ];
 
+  // よく使う機能を厳選して表示
   const quickActions = [
     {
       title: '日報を入力',
@@ -109,53 +111,18 @@ export default function DashboardPage() {
       color: 'from-green-500 to-blue-500'
     },
     {
-      title: '顧客を追加',
-      description: '新しい顧客情報を登録',
-      icon: '👥',
-      href: '/customers',
+      title: '計画シミュレーション',
+      description: '事業計画と予算配分の最適化',
+      icon: '🚀',
+      href: '/planning',
       color: 'from-purple-500 to-pink-500'
     },
     {
-      title: '支出を登録',
-      description: '経費・支出を記録',
-      icon: '💰',
-      href: '/expenses',
-      color: 'from-pink-500 to-orange-500'
-    },
-    {
-      title: 'KPI目標管理',
+      title: '目標管理',
       description: '月次目標の設定と進捗確認',
       icon: '🎯',
       href: '/targets',
       color: 'from-orange-500 to-red-500'
-    },
-    {
-      title: 'システム設定',
-      description: 'サービス設定と成長パラメータ管理',
-      icon: '⚙️',
-      href: '/settings',
-      color: 'from-gray-500 to-slate-500'
-    },
-    {
-      title: '流入経路管理',
-      description: 'チャネル別目標設定と実績トラッキング',
-      icon: '📊',
-      href: '/channels',
-      color: 'from-cyan-500 to-blue-500'
-    },
-    {
-      title: 'コホート分析',
-      description: '顧客のリテンション率とLTV分析',
-      icon: '👥',
-      href: '/cohort-analysis',
-      color: 'from-purple-500 to-indigo-500'
-    },
-    {
-      title: '計画シミュレーション',
-      description: '事業計画と予算配分の最適化',
-      icon: '📊',
-      href: '/planning',
-      color: 'from-emerald-500 to-teal-500'
     }
   ];
 
@@ -285,9 +252,14 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* 月次目標との比較 */}
+          <div className="mb-8 animate-fade-in" style={{ animationDelay: '400ms' }}>
+            <MonthlyTargetComparison selectedMonth={selectedMonth} />
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* クイックアクション */}
-            <div className="glass rounded-2xl p-6 shadow-soft animate-fade-in" style={{ animationDelay: '400ms' }}>
+            <div className="glass rounded-2xl p-6 shadow-soft animate-fade-in" style={{ animationDelay: '500ms' }}>
               <div className="mb-6">
                 <h2 className="text-xl font-semibold text-foreground mb-2">クイックアクション</h2>
                 <p className="text-muted-foreground">よく使う機能にすぐアクセス</p>
@@ -322,27 +294,10 @@ export default function DashboardPage() {
                   </Link>
                 ))}
               </div>
-              
-              {/* 代替ボタンも追加 */}
-              <div className="mt-6 pt-4 border-t border-gray-200">
-                <div className="grid grid-cols-1 gap-2">
-                  {quickActions.map((action) => (
-                    <Link key={`btn-${action.title}`} href={action.href}>
-                      <Button 
-                        variant="outline" 
-                        className="w-full justify-start bg-white/80 hover:bg-white/90"
-                      >
-                        <span className="mr-3">{action.icon}</span>
-                        {action.title}
-                      </Button>
-                    </Link>
-                  ))}
-                </div>
-              </div>
             </div>
 
             {/* AI予測とアラート */}
-            <div className="animate-fade-in" style={{ animationDelay: '500ms' }}>
+            <div className="animate-fade-in" style={{ animationDelay: '600ms' }}>
               <AIPredictionsCard currentMonth={selectedMonth} />
             </div>
           </div>
