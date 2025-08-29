@@ -8,13 +8,13 @@ import { useState } from 'react';
 import { format, subMonths, addMonths } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { useMonthlyTrends } from '@/hooks/useMonthlyTrends';
-import { TrendingUp, Target, BarChart3, DollarSign } from 'lucide-react';
+import { TrendingUp, Target, BarChart3, DollarSign, Users, UserMinus, CreditCard, PieChart, Activity } from 'lucide-react';
 
 interface MonthlyTrendChartProps {
   currentMonth: string;
 }
 
-type ChartType = 'revenue' | 'customers' | 'acquisition' | 'all';
+type ChartType = 'revenue' | 'customers' | 'acquisition' | 'churn' | 'expenses' | 'profitability' | 'growth' | 'all';
 
 export function MonthlyTrendChart({ currentMonth }: MonthlyTrendChartProps) {
   const [chartType, setChartType] = useState<ChartType>('revenue');
@@ -89,6 +89,66 @@ export function MonthlyTrendChart({ currentMonth }: MonthlyTrendChartProps) {
       ],
       yAxisFormatter: (value: number) => `${value}人`
     },
+    churn: {
+      title: 'チャーン率推移',
+      description: '顧客離脱率の実績と目標',
+      icon: <UserMinus className="w-5 h-5" />,
+      data: data.monthlyData,
+      lines: [
+        { key: 'churnRate', name: 'チャーン率実績', color: '#ef4444', strokeDasharray: '0' },
+        { key: 'churnRateTarget', name: 'チャーン率目標', color: '#f97316', strokeDasharray: '5 5' }
+      ],
+      yAxisFormatter: (value: number) => `${value}%`
+    },
+    expenses: {
+      title: '月次支出推移',
+      description: '支出実績と予算の推移',
+      icon: <CreditCard className="w-5 h-5" />,
+      data: data.monthlyData,
+      lines: [
+        { key: 'totalExpenses', name: '支出実績', color: '#dc2626', strokeDasharray: '0' },
+        { key: 'monthlyExpensesTarget', name: '支出予算', color: '#ea580c', strokeDasharray: '5 5' }
+      ],
+      yAxisFormatter: (value: number) => `¥${(value / 1000000).toFixed(1)}M`
+    },
+    profitability: {
+      title: '収益性推移',
+      description: 'MRRと支出の比較による収益性分析',
+      icon: <PieChart className="w-5 h-5" />,
+      data: data.monthlyData.map(d => ({
+        ...d,
+        operatingProfit: d.mrr - d.totalExpenses,
+        operatingMargin: d.mrr > 0 ? ((d.mrr - d.totalExpenses) / d.mrr) * 100 : 0
+      })),
+      lines: [
+        { key: 'mrr', name: 'MRR', color: '#10b981', strokeDasharray: '0' },
+        { key: 'totalExpenses', name: '支出', color: '#ef4444', strokeDasharray: '0' },
+        { key: 'operatingProfit', name: '営業利益', color: '#3b82f6', strokeDasharray: '3 3' }
+      ],
+      yAxisFormatter: (value: number) => `¥${(value / 1000000).toFixed(1)}M`
+    },
+    growth: {
+      title: '成長率推移',
+      description: 'MRRと顧客数の月次成長率',
+      icon: <Activity className="w-5 h-5" />,
+      data: data.monthlyData.map((d, i) => {
+        const prevMonth = i > 0 ? data.monthlyData[i - 1] : null;
+        return {
+          ...d,
+          mrrGrowthRate: prevMonth && prevMonth.mrr > 0 
+            ? ((d.mrr - prevMonth.mrr) / prevMonth.mrr) * 100 
+            : 0,
+          customerGrowthRate: prevMonth && prevMonth.activeCustomers > 0
+            ? ((d.activeCustomers - prevMonth.activeCustomers) / prevMonth.activeCustomers) * 100
+            : 0
+        };
+      }),
+      lines: [
+        { key: 'mrrGrowthRate', name: 'MRR成長率', color: '#10b981', strokeDasharray: '0' },
+        { key: 'customerGrowthRate', name: '顧客数成長率', color: '#8b5cf6', strokeDasharray: '0' }
+      ],
+      yAxisFormatter: (value: number) => `${value.toFixed(1)}%`
+    },
     all: {
       title: '総合指標推移',
       description: '主要KPIの統合ビュー',
@@ -119,14 +179,18 @@ export function MonthlyTrendChart({ currentMonth }: MonthlyTrendChartProps) {
               過去6ヶ月 + 未来6ヶ月
             </Badge>
             <Select value={chartType} onValueChange={(value) => setChartType(value as ChartType)}>
-              <SelectTrigger className="w-full sm:w-40">
+              <SelectTrigger className="w-full sm:w-48">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="revenue">収益推移</SelectItem>
-                <SelectItem value="customers">顧客数推移</SelectItem>
-                <SelectItem value="acquisition">新規獲得推移</SelectItem>
-                <SelectItem value="all">統合ビュー</SelectItem>
+                <SelectItem value="revenue">💰 収益推移</SelectItem>
+                <SelectItem value="customers">👥 顧客数推移</SelectItem>
+                <SelectItem value="acquisition">🎯 新規獲得推移</SelectItem>
+                <SelectItem value="churn">📉 チャーン率推移</SelectItem>
+                <SelectItem value="expenses">💳 支出推移</SelectItem>
+                <SelectItem value="profitability">📊 収益性分析</SelectItem>
+                <SelectItem value="growth">📈 成長率推移</SelectItem>
+                <SelectItem value="all">🔄 統合ビュー</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -251,35 +315,100 @@ export function MonthlyTrendChart({ currentMonth }: MonthlyTrendChartProps) {
           </div>
         </div>
 
-        {/* サマリー統計 */}
+        {/* 動的サマリー統計 */}
         {data.summary && (
           <div className="mt-6 p-4 rounded-lg bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20">
-            <h4 className="font-medium mb-3">直近6ヶ月サマリー</h4>
+            <h4 className="font-medium mb-3">
+              {chartType === 'revenue' && '収益サマリー'}
+              {chartType === 'customers' && '顧客サマリー'}
+              {chartType === 'acquisition' && '獲得サマリー'}
+              {chartType === 'churn' && 'チャーンサマリー'}
+              {chartType === 'expenses' && '支出サマリー'}
+              {chartType === 'profitability' && '収益性サマリー'}
+              {chartType === 'growth' && '成長サマリー'}
+              {chartType === 'all' && '総合サマリー'}
+            </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">平均MRR成長率</p>
-                <p className="font-semibold text-green-600">
-                  +{data.summary.avgMrrGrowth}%
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">累計新規獲得</p>
-                <p className="font-semibold">
-                  {data.summary.totalNewCustomers}人
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">目標達成率</p>
-                <p className="font-semibold text-blue-600">
-                  {data.summary.avgAchievementRate}%
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">予測年間成長率</p>
-                <p className="font-semibold text-purple-600">
-                  +{data.summary.projectedAnnualGrowth}%
-                </p>
-              </div>
+              {chartType === 'revenue' && (
+                <>
+                  <div>
+                    <p className="text-muted-foreground">平均MRR成長率</p>
+                    <p className="font-semibold text-green-600">+{data.summary.avgMrrGrowth}%</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">現在MRR</p>
+                    <p className="font-semibold">¥{config.data[config.data.length - 1]?.mrr?.toLocaleString() || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">目標達成率</p>
+                    <p className="font-semibold text-blue-600">{data.summary.avgAchievementRate}%</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">年間予測ARR</p>
+                    <p className="font-semibold text-purple-600">¥{((config.data[config.data.length - 1]?.mrr || 0) * 12 / 1000000).toFixed(1)}M</p>
+                  </div>
+                </>
+              )}
+              {chartType === 'customers' && (
+                <>
+                  <div>
+                    <p className="text-muted-foreground">現在顧客数</p>
+                    <p className="font-semibold">{config.data[config.data.length - 1]?.activeCustomers?.toLocaleString() || 0}人</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">累計新規獲得</p>
+                    <p className="font-semibold text-green-600">{data.summary.totalNewCustomers}人</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">目標達成率</p>
+                    <p className="font-semibold text-blue-600">{data.summary.avgAchievementRate}%</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">平均顧客単価</p>
+                    <p className="font-semibold">¥{Math.round((config.data[config.data.length - 1]?.mrr || 0) / Math.max(1, config.data[config.data.length - 1]?.activeCustomers || 1)).toLocaleString()}</p>
+                  </div>
+                </>
+              )}
+              {chartType === 'acquisition' && (
+                <>
+                  <div>
+                    <p className="text-muted-foreground">累計新規獲得</p>
+                    <p className="font-semibold text-green-600">{data.summary.totalNewCustomers}人</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">月平均獲得数</p>
+                    <p className="font-semibold">{Math.round(data.summary.totalNewCustomers / 6)}人</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">目標達成率</p>
+                    <p className="font-semibold text-blue-600">{data.summary.avgAchievementRate}%</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">獲得効率</p>
+                    <p className="font-semibold text-purple-600">{data.summary.projectedAnnualGrowth > 0 ? '向上中' : '要改善'}</p>
+                  </div>
+                </>
+              )}
+              {(chartType === 'churn' || chartType === 'expenses' || chartType === 'profitability' || chartType === 'growth' || chartType === 'all') && (
+                <>
+                  <div>
+                    <p className="text-muted-foreground">平均MRR成長率</p>
+                    <p className="font-semibold text-green-600">+{data.summary.avgMrrGrowth}%</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">累計新規獲得</p>
+                    <p className="font-semibold">{data.summary.totalNewCustomers}人</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">目標達成率</p>
+                    <p className="font-semibold text-blue-600">{data.summary.avgAchievementRate}%</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">予測年間成長率</p>
+                    <p className="font-semibold text-purple-600">+{data.summary.projectedAnnualGrowth}%</p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
