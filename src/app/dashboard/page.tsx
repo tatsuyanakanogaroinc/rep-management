@@ -23,7 +23,7 @@ export default function DashboardPage() {
   });
 
   // 認証されている場合のみデータを取得
-  const { data: dashboardData, isLoading } = useDashboardWithTargets(selectedMonth, !!user);
+  const { data: dashboardData, isLoading, error } = useDashboardWithTargets(selectedMonth, !!user && !!userProfile);
 
   const handleSignOut = async () => {
     await signOut();
@@ -189,6 +189,34 @@ export default function DashboardPage() {
 
         {/* メインコンテンツ */}
         <main className="relative z-10 max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+          {/* データ読み込み中またはエラー時の表示 */}
+          {isLoading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="relative mb-4">
+                  <div className="w-8 h-8 rounded-full border-2 border-gray-200"></div>
+                  <div className="absolute top-0 left-0 w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
+                </div>
+                <p className="text-sm text-muted-foreground">データを読み込んでいます...</p>
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="mb-8 p-4 bg-orange-50 border border-orange-200 rounded-xl">
+              <div className="flex items-center">
+                <div className="text-orange-500 mr-3">⚠️</div>
+                <div>
+                  <h3 className="font-medium text-orange-800">データの読み込みに問題があります</h3>
+                  <p className="text-sm text-orange-600">基本的なデータを表示しています。しばらく待ってから再度お試しください。</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* データが利用可能または読み込み中でも基本レイアウトを表示 */}
+          {!isLoading && (
+            <>
           {/* メトリクスカード */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {progressMetrics.map((metric, index) => (
@@ -314,6 +342,8 @@ export default function DashboardPage() {
               <AIPredictionsCard currentMonth={selectedMonth} />
             </div>
           </div>
+            </>
+          )}
         </main>
       </div>
     </ProtectedRoute>

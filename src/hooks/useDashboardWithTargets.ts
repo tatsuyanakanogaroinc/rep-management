@@ -38,22 +38,21 @@ export function useDashboardWithTargets(selectedMonth: string, enabled: boolean 
   return useQuery({
     queryKey: ['dashboard-with-targets', selectedMonth],
     enabled,
+    staleTime: 2 * 60 * 1000, // 2分間キャッシュ
+    refetchInterval: 5 * 60 * 1000, // 5分ごとに更新
+    retry: 1, // 失敗時1回のみリトライ
     queryFn: async (): Promise<DashboardDataWithTargets> => {
+      console.log('Dashboard: Fetching data for', selectedMonth);
+      const startTime = performance.now();
+      
+      try {
       const monthStart = startOfMonth(new Date(selectedMonth + '-01'));
       const monthEnd = endOfMonth(monthStart);
       const prevMonthStart = startOfMonth(subMonths(monthStart, 1));
       const prevMonthEnd = endOfMonth(prevMonthStart);
 
-      // 並列でデータ取得
-      const [
-        { data: activeCustomersData },
-        { data: prevActiveCustomersData },
-        { data: newAcquisitionsData },
-        { data: churnsData },
-        { data: expensesData },
-        { data: reportsData },
-        { data: targetsData }
-      ] = await Promise.all([
+      // タイムアウト付きで並列データ取得（5秒でタイムアウト）
+      const queries = [
         // 1. アクティブ顧客数（月末時点）
         supabase
           .from('customers')
@@ -102,7 +101,27 @@ export function useDashboardWithTargets(selectedMonth: string, enabled: boolean 
           .from('targets')
           .select('*')
           .eq('period', selectedMonth)
+      ];
+
+      // タイムアウトを設定して並列実行
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Dashboard data fetch timeout')), 5000)
+      );
+
+      const results = await Promise.race([
+        Promise.all(queries),
+        timeout
       ]);
+
+      const [
+        { data: activeCustomersData },
+        { data: prevActiveCustomersData },
+        { data: newAcquisitionsData },
+        { data: churnsData },
+        { data: expensesData },
+        { data: reportsData },
+        { data: targetsData }
+      ] = results;
 
       const activeCustomers = activeCustomersData?.length || 0;
       const prevActiveCustomers = prevActiveCustomersData?.length || 0;
@@ -177,7 +196,37 @@ export function useDashboardWithTargets(selectedMonth: string, enabled: boolean 
 
         monthlyReports,
       };
+    } catch (error) {
+      console.error('Dashboard: Error fetching data', error);
+      
+      // エラー時のフォールバックデータ
+      const fallbackData: DashboardDataWithTargets = {
+        mrr: 0,
+        mrrChange: '+0%',
+        mrrProgress: 0,
+        mrrDifference: 0,
+        activeCustomers: 0,
+        activeCustomersChange: '+0',
+        activeCustomersProgress: 0,
+        activeCustomersDifference: 0,
+        newAcquisitions: 0,
+        newAcquisitionsProgress: 0,
+        newAcquisitionsDifference: 0,
+        churns: 0,
+        churnRate: 0,
+        churnRateProgress: 0,
+        churnRateDifference: 0,
+        totalExpenses: 0,
+        expensesProgress: 0,
+        expensesDifference: 0,
+        monthlyReports: 0,
+      };
+      
+      return fallbackData;
+    } finally {
+      const endTime = performance.now();
+      console.log(`Dashboard: Data fetch completed in ${(endTime - startTime).toFixed(2)}ms`);
+    }
     },
-    refetchInterval: 5 * 60 * 1000, // 5分ごとに更新
   });
 }
