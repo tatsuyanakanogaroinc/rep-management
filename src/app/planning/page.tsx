@@ -14,6 +14,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuthContext } from '@/lib/auth-context';
 import { usePlanningCalculation } from '@/hooks/usePlanningCalculation';
 import { PlanningResults } from '@/components/features/planning/planning-results';
+import { useSettingsSync } from '@/hooks/useSettingsSync';
 
 interface ServiceSetting {
   id: string;
@@ -27,6 +28,7 @@ interface ServiceSetting {
 
 export default function PlanningPage() {
   const { user } = useAuthContext();
+  const { syncPlanningSettings, syncChannelSettings, isUpdating } = useSettingsSync();
   const [simulationParams, setSimulationParams] = useState({
     targetNewCustomers: 100,
     conversionRate: 15,
@@ -54,6 +56,18 @@ export default function PlanningPage() {
 
   // 計算結果をリアルタイムで取得
   const simulationResult = usePlanningCalculation(simulationParams, channelMix, channelCPA);
+
+  // 自動保存（デバウンス付き）
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (user && isChannelMixValid) {
+        syncPlanningSettings(simulationParams).catch(console.error);
+        syncChannelSettings(channelMix, channelCPA).catch(console.error);
+      }
+    }, 1000); // 1秒後に保存
+
+    return () => clearTimeout(timer);
+  }, [simulationParams, channelMix, channelCPA, user, isChannelMixValid, syncPlanningSettings, syncChannelSettings]);
 
   // サービス設定取得
   const { data: serviceSettings } = useQuery({
@@ -239,15 +253,20 @@ export default function PlanningPage() {
               </Card>
 
               <div className="bg-white/50 p-4 rounded-lg">
-                <div className="text-sm text-muted-foreground mb-2">リアルタイム計算</div>
+                <div className="text-sm text-muted-foreground mb-2">
+                  リアルタイム計算 {isUpdating ? '💾' : '✓'}
+                </div>
                 <div className="text-lg font-semibold">
-                  自動更新中 {isChannelMixValid ? '✓' : '⚠️'}
+                  {isUpdating ? '保存中...' : '自動保存済み'} {isChannelMixValid ? '✓' : '⚠️'}
                 </div>
                 {!isChannelMixValid && (
                   <div className="text-xs text-red-600 mt-1">
                     チャネル割合を100%に調整してください
                   </div>
                 )}
+                <div className="text-xs text-muted-foreground mt-2">
+                  設定は自動的に保存され、全システムに反映されます
+                </div>
               </div>
             </div>
 
