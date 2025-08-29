@@ -9,6 +9,7 @@ import { useDashboardWithTargets } from '@/hooks/useDashboardWithTargets';
 import { ProgressCard } from '@/components/ui/progress-card';
 import { AIPredictionsCard } from '@/components/features/ai/ai-predictions-card';
 import { MonthlyTargetComparison } from '@/components/features/dashboard/monthly-target-comparison';
+import { MonthlyTrendChart } from '@/components/features/dashboard/monthly-trend-chart';
 import Link from 'next/link';
 import { useState } from 'react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
@@ -251,6 +252,11 @@ export default function DashboardPage() {
               </Card>
             </div>
           )}
+
+          {/* 月次推移グラフ */}
+          <div className="mb-8 animate-fade-in" style={{ animationDelay: '300ms' }}>
+            <MonthlyTrendChart currentMonth={selectedMonth} />
+          </div>
 
           {/* 月次目標との比較 */}
           <div className="mb-8 animate-fade-in" style={{ animationDelay: '400ms' }}>
