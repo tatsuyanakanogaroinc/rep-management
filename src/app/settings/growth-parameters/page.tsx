@@ -77,24 +77,54 @@ export default function GrowthParametersPage() {
   };
 
   const handleSave = async () => {
+    setErrorMessage('');
+    setSuccessMessage('');
+    
     try {
+      // パラメータの妥当性を事前にチェック
+      const { validateParameters } = await import('@/lib/target-calculator');
+      const validationErrors = validateParameters(formData);
+      
+      if (validationErrors.length > 0) {
+        setErrorMessage('入力エラー: ' + validationErrors.join(', '));
+        return;
+      }
+      
+      console.log('Saving parameters:', formData);
       await updateParameters(formData);
       setSuccessMessage('パラメータが正常に保存されました');
       setErrorMessage('');
     } catch (error) {
-      setErrorMessage('保存中にエラーが発生しました');
+      console.error('Save error:', error);
+      const errorMessage = error instanceof Error ? error.message : '不明なエラー';
+      setErrorMessage(`保存中にエラーが発生しました: ${errorMessage}`);
       setSuccessMessage('');
     }
   };
 
   const handleRecalculate = async () => {
     setIsRecalculating(true);
+    setErrorMessage('');
+    setSuccessMessage('');
+    
     try {
+      // パラメータの妥当性を事前にチェック
+      const { validateParameters } = await import('@/lib/target-calculator');
+      const validationErrors = validateParameters(formData);
+      
+      if (validationErrors.length > 0) {
+        setErrorMessage('入力エラー: ' + validationErrors.join(', '));
+        return;
+      }
+      
+      console.log('Recalculating with parameters:', formData);
       await recalculateTargets(formData);
       setSuccessMessage('目標値が正常に再計算されました。ダッシュボードに反映されます。');
       setErrorMessage('');
     } catch (error) {
-      setErrorMessage('再計算中にエラーが発生しました');
+      console.error('Recalculation error:', error);
+      const errorMessage = error instanceof Error ? error.message : '不明なエラー';
+      setErrorMessage(`再計算中にエラーが発生しました: ${errorMessage}`);
       setSuccessMessage('');
     } finally {
       setIsRecalculating(false);

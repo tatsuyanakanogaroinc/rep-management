@@ -137,29 +137,47 @@ export function useGrowthParameters() {
         // 目標値を計算
         const targets = generateTargetsFromParameters(parameters);
         console.log('Generated targets:', targets.length, 'records');
+        
+        // 計算結果を確認
+        if (!targets || targets.length === 0) {
+          throw new Error('目標値の計算に失敗しました');
+        }
 
-        // 既存の目標値を削除（2025-09以降）
-        const { error: deleteError } = await supabase
+        // バッチで削除と挿入を行う（トランザクション的な処理）
+        // まず既存の目標値を削除（2025-09以降）
+        console.log('Deleting existing targets from 2025-09 onwards...');
+        const { error: deleteError, count: deleteCount } = await supabase
           .from('targets')
           .delete()
-          .gte('period', '2025-09');
+          .gte('period', '2025-09')
+          .select('*', { count: 'exact', head: true });
 
         if (deleteError) {
           console.error('Delete error:', deleteError);
-          throw deleteError;
+          throw new Error(`目標値の削除に失敗しました: ${deleteError.message}`);
         }
+        console.log(`Deleted ${deleteCount || 0} existing target records`);
 
-        // 新しい目標値を挿入
-        const { error: insertError } = await supabase
-          .from('targets')
-          .insert(targets);
+        // 新しい目標値をバッチで挿入（一度に100件まで）
+        const batchSize = 100;
+        for (let i = 0; i < targets.length; i += batchSize) {
+          const batch = targets.slice(i, i + batchSize);
+          console.log(`Inserting batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(targets.length / batchSize)}...`);
+          
+          const { error: insertError, data: insertedData } = await supabase
+            .from('targets')
+            .insert(batch)
+            .select('*', { count: 'exact', head: true });
 
-        if (insertError) {
-          console.error('Insert error:', insertError);
-          throw insertError;
+          if (insertError) {
+            console.error('Insert error:', insertError);
+            throw new Error(`目標値の挿入に失敗しました: ${insertError.message}`);
+          }
         }
+        console.log('All target batches inserted successfully');
 
         // パラメータも更新
+        console.log('Updating growth parameters...');
         await updateParametersMutation.mutateAsync(parameters);
 
         console.log('Successfully updated targets and parameters');
@@ -167,7 +185,11 @@ export function useGrowthParameters() {
         
       } catch (error) {
         console.error('Recalculate targets error:', error);
-        throw error;
+        // エラーメッセージを明確にする
+        if (error instanceof Error) {
+          throw new Error(`再計算エラー: ${error.message}`);
+        }
+        throw new Error('目標値の再計算中に予期しないエラーが発生しました');
       }
     },
     onSuccess: () => {
