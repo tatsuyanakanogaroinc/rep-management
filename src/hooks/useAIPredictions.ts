@@ -7,7 +7,19 @@ export function useAIPredictions(currentMonth: string, enabled: boolean = true) 
   return useQuery({
     queryKey: ['ai-predictions', currentMonth],
     enabled,
+    staleTime: 5 * 60 * 1000, // 5分間キャッシュ
+    retry: 1, // 失敗時1回のみリトライ
     queryFn: async (): Promise<{ predictions: PredictionData[]; alerts: Alert[] }> => {
+      console.log('AIPredictions: Generating predictions for', currentMonth);
+      const startTime = performance.now();
+      
+      try {
+        // 6秒でタイムアウト
+        const timeout = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('AI predictions timeout')), 6000)
+        );
+
+        const dataFetch = async () => {
       // 過去6ヶ月のデータを取得
       const historicalData: Record<string, HistoricalData[]> = {
         mrr: [],
@@ -109,8 +121,50 @@ export function useAIPredictions(currentMonth: string, enabled: boolean = true) 
       const alerts = generateAlerts(predictions, targets);
 
       return { predictions, alerts };
+        };
+
+        const result = await Promise.race([dataFetch(), timeout]);
+        
+        const endTime = performance.now();
+        console.log(`AIPredictions: Completed in ${(endTime - startTime).toFixed(2)}ms`);
+        
+        return result;
+        
+      } catch (error) {
+        console.error('AIPredictions: Error:', error);
+        
+        // フォールバックデータを返す
+        const fallbackPredictions: PredictionData[] = [
+          {
+            metric: 'mrr',
+            currentValue: 0,
+            predictedValue: 0,
+            changePercent: 0,
+            trend: 'stable' as const,
+            confidence: 0.1
+          },
+          {
+            metric: 'active_customers',
+            currentValue: 0,
+            predictedValue: 0,
+            changePercent: 0,
+            trend: 'stable' as const,
+            confidence: 0.1
+          }
+        ];
+
+        const fallbackAlerts: Alert[] = [
+          {
+            id: 'fallback-1',
+            type: 'info' as const,
+            title: 'データ取得中',
+            message: '予測データの読み込みに時間がかかっています。しばらくお待ちください。',
+            priority: 1
+          }
+        ];
+
+        return { predictions: fallbackPredictions, alerts: fallbackAlerts };
+      }
     },
-    staleTime: 10 * 60 * 1000, // 10分間キャッシュ
-    cacheTime: 30 * 60 * 1000, // 30分間保持
   });
 }

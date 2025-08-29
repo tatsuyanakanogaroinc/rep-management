@@ -52,7 +52,7 @@ export function useAuth() {
         } catch (e) {
           console.warn('useAuth: Cache error, ignoring cache', e);
         }
-        fetchUserProfile(session.user.id);
+        fetchUserProfile(session.user.id, false, session.user);
         clearTimeout(initTimeout);
       } else {
         console.log('useAuth: No user, setting loading to false');
@@ -76,7 +76,7 @@ export function useAuth() {
       
       if (session?.user) {
         console.log('useAuth: Auth change - fetching profile');
-        await fetchUserProfile(session.user.id);
+        await fetchUserProfile(session.user.id, false, session.user);
       } else {
         console.log('useAuth: Auth change - no user');
         setUserProfile(null);
@@ -93,7 +93,7 @@ export function useAuth() {
     };
   }, []);
 
-  const fetchUserProfile = async (userId: string, isBackground = false) => {
+  const fetchUserProfile = async (userId: string, isBackground = false, userObj?: User) => {
     console.log(`useAuth: fetchUserProfile start`, { userId, isBackground });
     
     try {
@@ -113,11 +113,12 @@ export function useAuth() {
       if (error) {
         console.warn('useAuth: Profile fetch failed, using fallback:', error.message);
         // エラー時は常にフォールバックプロファイルを使用
+        // 特定のユーザーの場合は管理者権限を付与
         const fallbackProfile = {
           id: userId,
-          email: '',
-          name: 'User',
-          role: 'member' as const,
+          email: userObj?.email || user?.email || '',
+          name: userObj?.email === 'tatsuya.nakano@garoinc.jp' ? 'Tatsuya Nakano' : 'User',
+          role: userObj?.email === 'tatsuya.nakano@garoinc.jp' ? 'admin' as const : 'member' as const,
           is_active: true,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -139,11 +140,12 @@ export function useAuth() {
       console.warn('useAuth: Profile fetch exception, using fallback:', error);
       
       // 例外時も必ずフォールバックプロファイルを設定
+      // 特定のユーザーの場合は管理者権限を付与
       const fallbackProfile = {
         id: userId,
-        email: '',
-        name: 'User',
-        role: 'member' as const,
+        email: userObj?.email || user?.email || '',
+        name: userObj?.email === 'tatsuya.nakano@garoinc.jp' ? 'Tatsuya Nakano' : 'User',
+        role: userObj?.email === 'tatsuya.nakano@garoinc.jp' ? 'admin' as const : 'member' as const,
         is_active: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()

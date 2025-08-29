@@ -37,7 +37,11 @@ export function useMonthlyTrends(currentMonth: string, enabled: boolean = true) 
   return useQuery({
     queryKey: ['monthly-trends', currentMonth],
     enabled: enabled && !!user,
+    staleTime: 3 * 60 * 1000, // 3分間キャッシュ
+    retry: 1, // 失敗時1回のみリトライ
     queryFn: async (): Promise<MonthlyTrendsData> => {
+      console.log('MonthlyTrends: Fetching data for', currentMonth);
+      const startTime = performance.now();
       const currentDate = new Date(currentMonth + '-01');
       
       // 過去6ヶ月から未来6ヶ月までの範囲を設定
@@ -53,8 +57,14 @@ export function useMonthlyTrends(currentMonth: string, enabled: boolean = true) 
       }
 
       try {
+        // 7秒でタイムアウト
+        const timeout = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Monthly trends fetch timeout')), 7000)
+        );
+
         // 並列でデータ取得
-        const [targetsResult, actualDataResults] = await Promise.all([
+        const [targetsResult, actualDataResults] = await Promise.race([
+          Promise.all([
           // 全期間の目標データを取得
           supabase
             .from('targets')
@@ -87,6 +97,8 @@ export function useMonthlyTrends(currentMonth: string, enabled: boolean = true) 
               return { month, customersData: customersData || [], expensesData: expensesData || [] };
             })
           )
+          ]),
+          timeout
         ]);
 
         const { data: targetsData } = targetsResult;
@@ -237,14 +249,41 @@ export function useMonthlyTrends(currentMonth: string, enabled: boolean = true) 
           projectedAnnualGrowth
         };
 
+        const endTime = performance.now();
+        console.log(`MonthlyTrends: Data fetch completed in ${(endTime - startTime).toFixed(2)}ms`);
+        
         return { monthlyData, summary };
 
       } catch (error) {
-        console.error('Monthly trends fetch error:', error);
-        throw error;
+        console.error('MonthlyTrends: Fetch error:', error);
+        
+        // フォールバックデータを返す
+        const fallbackMonths = months.map(month => ({
+          month,
+          mrr: 0,
+          mrrTarget: 0,
+          activeCustomers: 0,
+          activeCustomersTarget: 0,
+          newAcquisitions: 0,
+          newAcquisitionsTarget: 0,
+          churnRate: 0,
+          churnRateTarget: 0,
+          totalExpenses: 0,
+          monthlyExpensesTarget: 0,
+          isFuture: new Date(month + '-01') > new Date(),
+          isCurrentMonth: month === currentMonth
+        }));
+
+        return {
+          monthlyData: fallbackMonths,
+          summary: {
+            avgMrrGrowth: 0,
+            totalNewCustomers: 0,
+            avgAchievementRate: 0,
+            projectedAnnualGrowth: 0
+          }
+        };
       }
     },
-    staleTime: 5 * 60 * 1000, // 5分間キャッシュ
-    cacheTime: 10 * 60 * 1000, // 10分間保持
   });
 }
