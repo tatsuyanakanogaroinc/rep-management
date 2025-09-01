@@ -62,9 +62,8 @@ export function Sidebar() {
     },
     {
       href: '/plan-vs-actual',
-      label: 'AI分析・予測',
-      icon: <Brain className="w-5 h-5" />,
-      badge: 'AI'
+      label: '予実管理',
+      icon: <Target className="w-5 h-5" />
     },
     {
       href: '/monthly-report',

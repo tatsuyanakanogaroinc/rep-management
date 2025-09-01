@@ -1,23 +1,81 @@
 'use client';
 
 import { ProtectedRoute } from '@/components/auth/protected-route';
-import { useAuthContext } from '@/lib/auth-context';
 import { AppLayout } from '@/components/layout/app-layout';
-import { PageLoading } from '@/components/ui/loading';
+import { useAuthContext } from '@/lib/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, TrendingUp, TrendingDown, Target, BarChart3, AlertCircle, CheckCircle, Calendar } from 'lucide-react';
-import Link from 'next/link';
-import { useState } from 'react';
-import { format, subMonths } from 'date-fns';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useState, useEffect } from 'react';
+import { format, addMonths } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { useDashboardWithTargets } from '@/hooks/useDashboardWithTargets';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Area } from 'recharts';
-import { AIVarianceAnalysis } from '@/components/features/ai/ai-variance-analysis';
-import { DynamicForecastChart } from '@/components/features/forecasting/dynamic-forecast-chart';
+import { 
+  Target, 
+  TrendingUp, 
+  DollarSign, 
+  Users, 
+  BarChart3,
+  AlertCircle,
+  CheckCircle,
+  RefreshCw,
+  Save,
+  Calculator,
+  ArrowUp,
+  ArrowDown,
+  Minus,
+  Radio
+} from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line } from 'recharts';
+
+interface PlanData {
+  month: string;
+  monthLabel: string;
+  newAcquisitions: number;
+  totalCustomers: number;
+  churnCount: number;
+  mrr: number;
+  expenses: number;
+  profit: number;
+  channels: ChannelPlan[];
+}
+
+interface ChannelPlan {
+  name: string;
+  plannedAcquisitions: number;
+  plannedCpa: number;
+  plannedCost: number;
+}
+
+interface ActualData {
+  month: string;
+  newAcquisitions: number;
+  totalCustomers: number;
+  churnCount: number;
+  mrr: number;
+  expenses: number;
+  channels: ChannelActual[];
+}
+
+interface ChannelActual {
+  name: string;
+  actualAcquisitions: number;
+  actualCpa: number;
+  actualCost: number;
+}
+
+interface VarianceData {
+  metric: string;
+  planned: number;
+  actual: number;
+  variance: number;
+  variancePercent: number;
+  unit: string;
+}
 
 export default function PlanVsActualPage() {
   const { userProfile } = useAuthContext();
@@ -25,13 +83,45 @@ export default function PlanVsActualPage() {
     const now = new Date();
     return format(now, 'yyyy-MM');
   });
-  
-  // 複数月のデータを取得
-  const currentMonthData = useDashboardWithTargets(selectedMonth);
-  const lastMonthData = useDashboardWithTargets(format(subMonths(new Date(selectedMonth + '-01'), 1), 'yyyy-MM'));
-  const twoMonthsAgoData = useDashboardWithTargets(format(subMonths(new Date(selectedMonth + '-01'), 2), 'yyyy-MM'));
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
-  // 月次オプション生成
+  // 月次計画データ（実際の実装では月次計画から取得）
+  const [planData, setPlanData] = useState<PlanData>({
+    month: selectedMonth,
+    monthLabel: format(new Date(selectedMonth + '-01'), 'yyyy年MM月', { locale: ja }),
+    newAcquisitions: 35,
+    totalCustomers: 150,
+    churnCount: 8,
+    mrr: 746000,
+    expenses: 710000,
+    profit: 36000,
+    channels: [
+      { name: 'Google広告', plannedAcquisitions: 14, plannedCpa: 6000, plannedCost: 84000 },
+      { name: 'Facebook広告', plannedAcquisitions: 11, plannedCpa: 7000, plannedCost: 77000 },
+      { name: '紹介', plannedAcquisitions: 7, plannedCpa: 0, plannedCost: 0 },
+      { name: 'オーガニック検索', plannedAcquisitions: 3, plannedCpa: 0, plannedCost: 0 }
+    ]
+  });
+
+  // 実績データ
+  const [actualData, setActualData] = useState<ActualData>({
+    month: selectedMonth,
+    newAcquisitions: 0,
+    totalCustomers: 0,
+    churnCount: 0,
+    mrr: 0,
+    expenses: 0,
+    channels: [
+      { name: 'Google広告', actualAcquisitions: 0, actualCpa: 0, actualCost: 0 },
+      { name: 'Facebook広告', actualAcquisitions: 0, actualCpa: 0, actualCost: 0 },
+      { name: '紹介', actualAcquisitions: 0, actualCpa: 0, actualCost: 0 },
+      { name: 'オーガニック検索', actualAcquisitions: 0, actualCpa: 0, actualCost: 0 }
+    ]
+  });
+
+  // 過去12ヶ月の選択肢を生成
   const generateMonthOptions = () => {
     const options = [];
     const now = new Date();
@@ -46,121 +136,169 @@ export default function PlanVsActualPage() {
 
   const monthOptions = generateMonthOptions();
 
-  // 比較データの準備
-  const comparisonData = [
-    {
-      metric: 'MRR',
-      icon: '💰',
-      planned: currentMonthData.data?.mrrTarget || 0,
-      actual: currentMonthData.data?.mrr || 0,
-      achievement: currentMonthData.data?.mrrProgress || 0,
-      difference: currentMonthData.data?.mrrDifference || 0,
-      unit: '円',
-      format: (v: number) => `¥${v.toLocaleString()}`
-    },
-    {
-      metric: 'アクティブ顧客数',
-      icon: '👥',
-      planned: currentMonthData.data?.activeCustomersTarget || 0,
-      actual: currentMonthData.data?.activeCustomers || 0,
-      achievement: currentMonthData.data?.activeCustomersProgress || 0,
-      difference: currentMonthData.data?.activeCustomersDifference || 0,
-      unit: '人',
-      format: (v: number) => `${v.toLocaleString()}人`
-    },
-    {
-      metric: '新規獲得',
-      icon: '📈',
-      planned: currentMonthData.data?.newAcquisitionsTarget || 0,
-      actual: currentMonthData.data?.newAcquisitions || 0,
-      achievement: currentMonthData.data?.newAcquisitionsProgress || 0,
-      difference: currentMonthData.data?.newAcquisitionsDifference || 0,
-      unit: '人',
-      format: (v: number) => `${v.toLocaleString()}人`
-    },
-    {
-      metric: 'チャーン率',
-      icon: '📉',
-      planned: currentMonthData.data?.churnRateTarget || 0,
-      actual: currentMonthData.data?.churnRate || 0,
-      achievement: currentMonthData.data?.churnRateProgress || 0,
-      difference: currentMonthData.data?.churnRateDifference || 0,
-      unit: '%',
-      format: (v: number) => `${v}%`,
-      isInverted: true
-    },
-    {
-      metric: '月次支出',
-      icon: '💸',
-      planned: currentMonthData.data?.monthlyExpensesTarget || 0,
-      actual: currentMonthData.data?.totalExpenses || 0,
-      achievement: currentMonthData.data?.expensesProgress || 0,
-      difference: currentMonthData.data?.expensesDifference || 0,
-      unit: '円',
-      format: (v: number) => `¥${v.toLocaleString()}`,
-      isInverted: true
-    }
-  ];
+  // 差分計算
+  const calculateVariance = (): VarianceData[] => {
+    const variances: VarianceData[] = [
+      {
+        metric: '新規獲得',
+        planned: planData.newAcquisitions,
+        actual: actualData.newAcquisitions,
+        variance: actualData.newAcquisitions - planData.newAcquisitions,
+        variancePercent: planData.newAcquisitions > 0 ? 
+          ((actualData.newAcquisitions - planData.newAcquisitions) / planData.newAcquisitions) * 100 : 0,
+        unit: '人'
+      },
+      {
+        metric: '総顧客数',
+        planned: planData.totalCustomers,
+        actual: actualData.totalCustomers,
+        variance: actualData.totalCustomers - planData.totalCustomers,
+        variancePercent: planData.totalCustomers > 0 ? 
+          ((actualData.totalCustomers - planData.totalCustomers) / planData.totalCustomers) * 100 : 0,
+        unit: '人'
+      },
+      {
+        metric: 'チャーン数',
+        planned: planData.churnCount,
+        actual: actualData.churnCount,
+        variance: actualData.churnCount - planData.churnCount,
+        variancePercent: planData.churnCount > 0 ? 
+          ((actualData.churnCount - planData.churnCount) / planData.churnCount) * 100 : 0,
+        unit: '人'
+      },
+      {
+        metric: 'MRR',
+        planned: planData.mrr,
+        actual: actualData.mrr,
+        variance: actualData.mrr - planData.mrr,
+        variancePercent: planData.mrr > 0 ? 
+          ((actualData.mrr - planData.mrr) / planData.mrr) * 100 : 0,
+        unit: '円'
+      },
+      {
+        metric: '支出',
+        planned: planData.expenses,
+        actual: actualData.expenses,
+        variance: actualData.expenses - planData.expenses,
+        variancePercent: planData.expenses > 0 ? 
+          ((actualData.expenses - planData.expenses) / planData.expenses) * 100 : 0,
+        unit: '円'
+      },
+      {
+        metric: '利益',
+        planned: planData.profit,
+        actual: actualData.mrr - actualData.expenses,
+        variance: (actualData.mrr - actualData.expenses) - planData.profit,
+        variancePercent: planData.profit !== 0 ? 
+          (((actualData.mrr - actualData.expenses) - planData.profit) / Math.abs(planData.profit)) * 100 : 0,
+        unit: '円'
+      }
+    ];
 
-  // トレンドデータの準備（過去3ヶ月）
-  const trendData = [
-    {
-      month: format(subMonths(new Date(selectedMonth + '-01'), 2), 'MM月'),
-      mrr: twoMonthsAgoData.data?.mrr || 0,
-      mrrTarget: twoMonthsAgoData.data?.mrrTarget || 0,
-      customers: twoMonthsAgoData.data?.activeCustomers || 0,
-      customersTarget: twoMonthsAgoData.data?.activeCustomersTarget || 0,
-    },
-    {
-      month: format(subMonths(new Date(selectedMonth + '-01'), 1), 'MM月'),
-      mrr: lastMonthData.data?.mrr || 0,
-      mrrTarget: lastMonthData.data?.mrrTarget || 0,
-      customers: lastMonthData.data?.activeCustomers || 0,
-      customersTarget: lastMonthData.data?.activeCustomersTarget || 0,
-    },
-    {
-      month: format(new Date(selectedMonth + '-01'), 'MM月'),
-      mrr: currentMonthData.data?.mrr || 0,
-      mrrTarget: currentMonthData.data?.mrrTarget || 0,
-      customers: currentMonthData.data?.activeCustomers || 0,
-      customersTarget: currentMonthData.data?.activeCustomersTarget || 0,
-    }
-  ];
-
-  // 達成度による色分け
-  const getAchievementColor = (achievement: number, isInverted?: boolean) => {
-    if (isInverted) {
-      if (achievement <= 80) return 'text-green-600 bg-green-50';
-      if (achievement <= 100) return 'text-yellow-600 bg-yellow-50';
-      return 'text-red-600 bg-red-50';
-    }
-    
-    if (achievement >= 100) return 'text-green-600 bg-green-50';
-    if (achievement >= 80) return 'text-yellow-600 bg-yellow-50';
-    return 'text-red-600 bg-red-50';
+    return variances;
   };
 
-  const getProgressColor = (achievement: number, isInverted?: boolean) => {
-    if (isInverted) {
-      if (achievement <= 80) return 'bg-green-500';
-      if (achievement <= 100) return 'bg-yellow-500';
-      return 'bg-red-500';
-    }
-    
-    if (achievement >= 100) return 'bg-green-500';
-    if (achievement >= 80) return 'bg-yellow-500';
-    return 'bg-red-500';
+  const varianceData = calculateVariance();
+
+  // 実績データ更新
+  const handleActualChange = (field: keyof ActualData, value: number) => {
+    setActualData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
-  if (currentMonthData.isLoading) {
-    return (
-      <ProtectedRoute>
-        <AppLayout>
-          <PageLoading message="計画vs実績データを読み込み中..." />
-        </AppLayout>
-      </ProtectedRoute>
-    );
-  }
+  // チャネル実績更新
+  const handleChannelActualChange = (index: number, field: keyof ChannelActual, value: number) => {
+    setActualData(prev => ({
+      ...prev,
+      channels: prev.channels.map((channel, i) => 
+        i === index ? { ...channel, [field]: value } : channel
+      )
+    }));
+  };
+
+  // チャネル別CPA差異計算
+  const calculateChannelVariances = () => {
+    return planData.channels.map((plannedChannel, index) => {
+      const actualChannel = actualData.channels[index];
+      if (!actualChannel) return null;
+
+      const cpaVariance = actualChannel.actualCpa - plannedChannel.plannedCpa;
+      const cpaVariancePercent = plannedChannel.plannedCpa > 0 ? 
+        (cpaVariance / plannedChannel.plannedCpa) * 100 : 0;
+      const acquisitionVariance = actualChannel.actualAcquisitions - plannedChannel.plannedAcquisitions;
+      const acquisitionVariancePercent = plannedChannel.plannedAcquisitions > 0 ? 
+        (acquisitionVariance / plannedChannel.plannedAcquisitions) * 100 : 0;
+      const costVariance = actualChannel.actualCost - plannedChannel.plannedCost;
+
+      return {
+        name: plannedChannel.name,
+        planned: {
+          acquisitions: plannedChannel.plannedAcquisitions,
+          cpa: plannedChannel.plannedCpa,
+          cost: plannedChannel.plannedCost
+        },
+        actual: {
+          acquisitions: actualChannel.actualAcquisitions,
+          cpa: actualChannel.actualCpa,
+          cost: actualChannel.actualCost
+        },
+        variance: {
+          acquisitions: acquisitionVariance,
+          acquisitionsPercent: acquisitionVariancePercent,
+          cpa: cpaVariance,
+          cpaPercent: cpaVariancePercent,
+          cost: costVariance
+        }
+      };
+    }).filter(Boolean);
+  };
+
+  const channelVariances = calculateChannelVariances();
+
+  // 実績データ保存
+  const handleSaveActuals = async () => {
+    setIsSaving(true);
+    setErrorMessage('');
+    setSuccessMessage('');
+    
+    try {
+      // TODO: 実際のデータベース保存処理
+      await new Promise(resolve => setTimeout(resolve, 1000)); // 模擬的な保存処理
+      setSuccessMessage('実績データを保存しました！');
+    } catch (error) {
+      console.error('Save error:', error);
+      setErrorMessage('実績データの保存中にエラーが発生しました');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // メッセージを3秒後に消す
+  useEffect(() => {
+    if (successMessage || errorMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage('');
+        setErrorMessage('');
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage, errorMessage]);
+
+  // 差分の表示色を決定
+  const getVarianceColor = (variance: number, isInverted: boolean = false) => {
+    if (variance === 0) return 'text-gray-600';
+    const isPositive = isInverted ? variance < 0 : variance > 0;
+    return isPositive ? 'text-green-600' : 'text-red-600';
+  };
+
+  // 差分アイコンを決定
+  const getVarianceIcon = (variance: number, isInverted: boolean = false) => {
+    if (variance === 0) return <Minus className="w-4 h-4" />;
+    const isPositive = isInverted ? variance < 0 : variance > 0;
+    return isPositive ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />;
+  };
 
   return (
     <ProtectedRoute>
@@ -168,21 +306,21 @@ export default function PlanVsActualPage() {
         <div className="relative min-h-screen overflow-hidden">
           <div className="absolute inset-0 gradient-mesh opacity-10" />
         
-        {/* ページヘッダー */}
-        <header className="relative z-10 bg-white/80 border-b border-gray-100">
+        {/* ヘッダー */}
+        <header className="relative z-10 glass border-b border-gray-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-6">
               <div className="animate-fade-in">
                 <div className="flex items-center gap-3">
-                  <BarChart3 className="w-8 h-8 text-primary" />
+                  <Target className="w-8 h-8 text-primary" />
                   <div>
                     <h1 className="text-2xl font-bold">
                       <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                        計画vs実績分析
+                        予実管理
                       </span>
                     </h1>
                     <p className="text-muted-foreground mt-1">
-                      目標達成状況の詳細分析
+                      月次計画と実績の比較分析
                     </p>
                   </div>
                 </div>
@@ -205,261 +343,545 @@ export default function PlanVsActualPage() {
           </div>
         </header>
 
+        {/* メッセージ */}
+        {successMessage && (
+          <Alert className="m-6 border-green-200 bg-green-50">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800">
+              {successMessage}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {errorMessage && (
+          <Alert variant="destructive" className="m-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {errorMessage}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* メインコンテンツ */}
         <main className="relative z-10 max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-          {/* サマリーカード */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <Card className="glass">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Target className="w-5 h-5" />
-                  全体達成率
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">
-                  {Math.round(
-                    (currentMonthData.data?.mrrProgress || 0) * 0.4 +
-                    (currentMonthData.data?.activeCustomersProgress || 0) * 0.3 +
-                    (currentMonthData.data?.newAcquisitionsProgress || 0) * 0.3
-                  )}%
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  主要KPIの加重平均
-                </p>
-              </CardContent>
-            </Card>
+          <Tabs defaultValue="overview" className="space-y-8">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="overview">予実対比</TabsTrigger>
+              <TabsTrigger value="input">実績入力</TabsTrigger>
+              <TabsTrigger value="channels">チャネル別分析</TabsTrigger>
+            </TabsList>
 
-            <Card className="glass">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5" />
-                  目標超過項目
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-green-600">
-                  {comparisonData.filter(d => d.achievement >= 100).length}
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  / {comparisonData.length} 項目中
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="glass">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5" />
-                  要改善項目
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-red-600">
-                  {comparisonData.filter(d => d.achievement < 80).length}
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  80%未満の項目
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* 詳細比較テーブル */}
-          <Card className="glass mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5" />
-                計画vs実績 詳細比較
-              </CardTitle>
-              <CardDescription>
-                {format(new Date(selectedMonth + '-01'), 'yyyy年MM月', { locale: ja })}の目標達成状況
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {comparisonData.map((item) => (
-                  <div key={item.metric} className="border-b pb-6 last:border-0">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{item.icon}</span>
-                        <h3 className="font-semibold text-lg">{item.metric}</h3>
+            {/* 予実対比タブ */}
+            <TabsContent value="overview" className="space-y-6">
+              {/* サマリーカード */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {planData.newAcquisitions}
                       </div>
-                      <Badge className={getAchievementColor(item.achievement, item.isInverted)}>
-                        達成率: {item.achievement}%
-                      </Badge>
+                      <p className="text-sm text-muted-foreground">計画新規獲得</p>
+                      <div className="text-lg font-semibold mt-2">
+                        {actualData.newAcquisitions}
+                      </div>
+                      <p className="text-xs text-muted-foreground">実績</p>
                     </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
-                      <div>
-                        <p className="text-sm text-muted-foreground">計画</p>
-                        <p className="text-xl font-semibold">{item.format(item.planned)}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">実績</p>
-                        <p className="text-xl font-semibold">{item.format(item.actual)}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">差分</p>
-                        <p className={`text-xl font-semibold ${item.difference >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {item.difference >= 0 ? '+' : ''}{item.format(Math.abs(item.difference))}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="w-full">
-                      <Progress 
-                        value={Math.min(100, item.achievement)} 
-                        className="h-3"
-                        indicatorClassName={getProgressColor(item.achievement, item.isInverted)}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* トレンドグラフ */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <Card className="glass">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5" />
-                  MRR推移
-                </CardTitle>
-                <CardDescription>
-                  過去3ヶ月の計画vs実績
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={trendData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis tickFormatter={(v) => `¥${(v / 1000000).toFixed(1)}M`} />
-                      <Tooltip formatter={(v: number) => `¥${v.toLocaleString()}`} />
-                      <Legend />
-                      <Bar dataKey="mrr" name="実績" fill="#10b981" />
-                      <Line 
-                        type="monotone" 
-                        dataKey="mrrTarget" 
-                        name="目標" 
-                        stroke="#3b82f6" 
-                        strokeDasharray="5 5"
-                        strokeWidth={2}
-                      />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="glass">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5" />
-                  顧客数推移
-                </CardTitle>
-                <CardDescription>
-                  過去3ヶ月の計画vs実績
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={trendData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip formatter={(v: number) => `${v}人`} />
-                      <Legend />
-                      <Bar dataKey="customers" name="実績" fill="#8b5cf6" />
-                      <Line 
-                        type="monotone" 
-                        dataKey="customersTarget" 
-                        name="目標" 
-                        stroke="#ec4899" 
-                        strokeDasharray="5 5"
-                        strokeWidth={2}
-                      />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* AI分析セクション */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8 mt-8">
-            {/* AI乖離分析 */}
-            <div>
-              <AIVarianceAnalysis 
-                comparisonData={comparisonData}
-                historicalData={trendData}
-              />
-            </div>
-
-            {/* 動的予測 */}
-            <div>
-              <DynamicForecastChart 
-                historicalData={trendData.map(d => ({
-                  month: format(new Date(), 'yyyy') + '-' + d.month.replace('月', '').padStart(2, '0'),
-                  mrr: d.mrr,
-                  activeCustomers: d.customers,
-                  newAcquisitions: Math.round(d.customers * 0.1), // 仮の値
-                  churnRate: 5.0, // 仮の値
-                  totalExpenses: Math.round(d.mrr * 0.4) // 仮の値
-                }))}
-                currentMonth={selectedMonth}
-              />
-            </div>
-          </div>
-
-          {/* 改善提案 */}
-          <Card className="glass mt-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertCircle className="w-5 h-5" />
-                基本的な改善提案
-              </CardTitle>
-              <CardDescription>
-                目標未達項目への基本的な対策案
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {comparisonData
-                  .filter(item => item.achievement < 100)
-                  .map((item) => (
-                    <div key={item.metric} className="flex items-start gap-3 p-4 bg-orange-50 rounded-lg">
-                      <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1">
-                        <h4 className="font-medium mb-1">{item.metric}の改善</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {item.metric === 'MRR' && '価格戦略の見直しやアップセルの強化を検討してください。'}
-                          {item.metric === 'アクティブ顧客数' && 'リテンション施策の強化と新規獲得チャネルの拡大が必要です。'}
-                          {item.metric === '新規獲得' && 'マーケティング施策の見直しとコンバージョン率の改善に注力しましょう。'}
-                          {item.metric === 'チャーン率' && '顧客満足度調査を実施し、離脱要因を特定して対策を講じてください。'}
-                          {item.metric === '月次支出' && 'コスト構造の見直しと効率化により、予算内での運営を目指しましょう。'}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                  </CardContent>
+                </Card>
                 
-                {comparisonData.filter(item => item.achievement < 100).length === 0 && (
-                  <div className="text-center py-8">
-                    <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
-                    <p className="text-lg font-medium">すべての目標を達成しています！</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      この調子で次月も頑張りましょう。
-                    </p>
-                  </div>
-                )}
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">
+                        ¥{planData.mrr.toLocaleString()}
+                      </div>
+                      <p className="text-sm text-muted-foreground">計画MRR</p>
+                      <div className="text-lg font-semibold mt-2">
+                        ¥{actualData.mrr.toLocaleString()}
+                      </div>
+                      <p className="text-xs text-muted-foreground">実績</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-purple-600">
+                        ¥{planData.profit.toLocaleString()}
+                      </div>
+                      <p className="text-sm text-muted-foreground">計画利益</p>
+                      <div className="text-lg font-semibold mt-2">
+                        ¥{(actualData.mrr - actualData.expenses).toLocaleString()}
+                      </div>
+                      <p className="text-xs text-muted-foreground">実績</p>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            </CardContent>
-          </Card>
+
+              {/* 予実対比表 */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5" />
+                    予実対比詳細
+                  </CardTitle>
+                  <CardDescription>
+                    {format(new Date(selectedMonth + '-01'), 'yyyy年MM月', { locale: ja })}の計画vs実績
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-3">項目</th>
+                          <th className="text-right p-3">計画</th>
+                          <th className="text-right p-3">実績</th>
+                          <th className="text-right p-3">差分</th>
+                          <th className="text-right p-3">差分率</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {varianceData.map((item) => (
+                          <tr key={item.metric} className="border-b hover:bg-gray-50">
+                            <td className="p-3 font-medium">{item.metric}</td>
+                            <td className="p-3 text-right">
+                              {item.unit === '円' ? `¥${item.planned.toLocaleString()}` : `${item.planned}${item.unit}`}
+                            </td>
+                            <td className="p-3 text-right">
+                              {item.unit === '円' ? `¥${item.actual.toLocaleString()}` : `${item.actual}${item.unit}`}
+                            </td>
+                            <td className={`p-3 text-right ${getVarianceColor(item.variance, item.metric === 'チャーン数' || item.metric === '支出')}`}>
+                              <div className="flex items-center justify-end gap-1">
+                                {getVarianceIcon(item.variance, item.metric === 'チャーン数' || item.metric === '支出')}
+                                {item.unit === '円' ? `¥${Math.abs(item.variance).toLocaleString()}` : `${Math.abs(item.variance)}${item.unit}`}
+                              </div>
+                            </td>
+                            <td className={`p-3 text-right font-semibold ${getVarianceColor(item.variance, item.metric === 'チャーン数' || item.metric === '支出')}`}>
+                              {item.variancePercent > 0 ? '+' : ''}{item.variancePercent.toFixed(1)}%
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 予実グラフ */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>予実対比グラフ</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={varianceData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="metric" fontSize={12} />
+                        <YAxis fontSize={12} />
+                        <Tooltip 
+                          formatter={(value: number, name: string) => [
+                            name === 'planned' || name === 'actual' ? 
+                              (typeof value === 'number' && value > 1000 ? `¥${value.toLocaleString()}` : value.toString()) :
+                              value.toString(),
+                            name === 'planned' ? '計画' : '実績'
+                          ]}
+                        />
+                        <Legend />
+                        <Bar dataKey="planned" fill="#3b82f6" name="計画" />
+                        <Bar dataKey="actual" fill="#10b981" name="実績" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* 実績入力タブ */}
+            <TabsContent value="input" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* 基本実績入力 */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Calculator className="w-5 h-5" />
+                      基本実績入力
+                    </CardTitle>
+                    <CardDescription>
+                      {format(new Date(selectedMonth + '-01'), 'yyyy年MM月', { locale: ja })}の実績値を入力
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label>新規獲得数</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          value={actualData.newAcquisitions}
+                          onChange={(e) => handleActualChange('newAcquisitions', parseInt(e.target.value) || 0)}
+                          placeholder="実際の新規獲得数"
+                        />
+                        <span className="text-sm text-muted-foreground">人</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        計画: {planData.newAcquisitions}人
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <Label>総顧客数</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          value={actualData.totalCustomers}
+                          onChange={(e) => handleActualChange('totalCustomers', parseInt(e.target.value) || 0)}
+                          placeholder="月末時点の総顧客数"
+                        />
+                        <span className="text-sm text-muted-foreground">人</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        計画: {planData.totalCustomers}人
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <Label>チャーン数</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          value={actualData.churnCount}
+                          onChange={(e) => handleActualChange('churnCount', parseInt(e.target.value) || 0)}
+                          placeholder="解約した顧客数"
+                        />
+                        <span className="text-sm text-muted-foreground">人</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        計画: {planData.churnCount}人
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <Label>MRR</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          value={actualData.mrr}
+                          onChange={(e) => handleActualChange('mrr', parseInt(e.target.value) || 0)}
+                          placeholder="月次経常収益"
+                        />
+                        <span className="text-sm text-muted-foreground">円</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        計画: ¥{planData.mrr.toLocaleString()}
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <Label>総支出</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          value={actualData.expenses}
+                          onChange={(e) => handleActualChange('expenses', parseInt(e.target.value) || 0)}
+                          placeholder="月間総支出"
+                        />
+                        <span className="text-sm text-muted-foreground">円</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        計画: ¥{planData.expenses.toLocaleString()}
+                      </p>
+                    </div>
+
+                    <Button 
+                      onClick={handleSaveActuals}
+                      disabled={isSaving}
+                      className="w-full mt-6"
+                    >
+                      {isSaving ? (
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4 mr-2" />
+                      )}
+                      実績データを保存
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* 計画データ表示 */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5" />
+                      月次計画データ
+                    </CardTitle>
+                    <CardDescription>
+                      {format(new Date(selectedMonth + '-01'), 'yyyy年MM月', { locale: ja })}の計画値
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">新規獲得</span>
+                          <span className="font-medium">{planData.newAcquisitions}人</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">総顧客数</span>
+                          <span className="font-medium">{planData.totalCustomers}人</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">チャーン</span>
+                          <span className="font-medium">{planData.churnCount}人</span>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">MRR</span>
+                          <span className="font-medium">¥{planData.mrr.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">支出</span>
+                          <span className="font-medium">¥{planData.expenses.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">利益</span>
+                          <span className="font-medium">¥{planData.profit.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t">
+                      <h4 className="font-medium text-sm mb-3">チャネル別計画</h4>
+                      <div className="space-y-2">
+                        {planData.channels.map((channel, index) => (
+                          <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                            <span className="text-sm">{channel.name}</span>
+                            <div className="text-right">
+                              <div className="text-sm font-medium">{channel.plannedAcquisitions}人</div>
+                              <div className="text-xs text-muted-foreground">
+                                CPA: {channel.plannedCpa > 0 ? `¥${channel.plannedCpa.toLocaleString()}` : '無料'}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* 実績入力タブ */}
+            <TabsContent value="input" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* チャネル別実績入力 */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Radio className="w-5 h-5" />
+                      チャネル別実績
+                    </CardTitle>
+                    <CardDescription>
+                      各流入経路の実績値を入力
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {actualData.channels.map((channel, index) => (
+                      <div key={index} className="border rounded-lg p-4 space-y-3">
+                        <h4 className="font-medium">{channel.name}</h4>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div>
+                            <Label className="text-xs">獲得数</Label>
+                            <Input
+                              type="number"
+                              value={channel.actualAcquisitions}
+                              onChange={(e) => handleChannelActualChange(index, 'actualAcquisitions', parseInt(e.target.value) || 0)}
+                              placeholder="0"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              計画: {planData.channels[index]?.plannedAcquisitions || 0}人
+                            </p>
+                          </div>
+                          <div>
+                            <Label className="text-xs">実際のCPA</Label>
+                            <Input
+                              type="number"
+                              value={channel.actualCpa}
+                              onChange={(e) => handleChannelActualChange(index, 'actualCpa', parseInt(e.target.value) || 0)}
+                              placeholder="0"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              計画: ¥{planData.channels[index]?.plannedCpa.toLocaleString() || 0}
+                            </p>
+                          </div>
+                          <div>
+                            <Label className="text-xs">実際のコスト</Label>
+                            <Input
+                              type="number"
+                              value={channel.actualCost}
+                              onChange={(e) => handleChannelActualChange(index, 'actualCost', parseInt(e.target.value) || 0)}
+                              placeholder="0"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              計画: ¥{planData.channels[index]?.plannedCost.toLocaleString() || 0}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+
+                {/* 自動計算フィールド */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Calculator className="w-5 h-5" />
+                      自動計算
+                    </CardTitle>
+                    <CardDescription>
+                      チャネル実績から自動計算される値
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="p-4 bg-blue-50 rounded-lg">
+                      <h4 className="font-medium mb-3">チャネル実績サマリー</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>総獲得数</span>
+                          <span className="font-medium">
+                            {actualData.channels.reduce((sum, c) => sum + c.actualAcquisitions, 0)}人
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>総広告費</span>
+                          <span className="font-medium">
+                            ¥{actualData.channels.reduce((sum, c) => sum + c.actualCost, 0).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>平均CPA</span>
+                          <span className="font-medium">
+                            ¥{(() => {
+                              const totalAcquisitions = actualData.channels.reduce((sum, c) => sum + c.actualAcquisitions, 0);
+                              const totalCost = actualData.channels.reduce((sum, c) => sum + c.actualCost, 0);
+                              return totalAcquisitions > 0 ? Math.round(totalCost / totalAcquisitions).toLocaleString() : '0';
+                            })()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        チャネル別の実績を入力すると、全体の実績値に自動反映する機能は今後追加予定です。
+                        現在は基本実績とチャネル実績を個別に入力してください。
+                      </AlertDescription>
+                    </Alert>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* チャネル別分析タブ */}
+            <TabsContent value="channels" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Radio className="w-5 h-5" />
+                    チャネル別予実分析
+                  </CardTitle>
+                  <CardDescription>
+                    各流入経路の詳細な予実対比
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {channelVariances.map((channel, index) => (
+                      <div key={index} className="border rounded-lg p-4">
+                        <h4 className="font-semibold text-lg mb-4">{channel.name}</h4>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {/* 獲得数 */}
+                          <div className="text-center p-3 bg-gray-50 rounded">
+                            <div className="text-sm text-muted-foreground mb-1">獲得数</div>
+                            <div className="text-lg font-bold">{channel.actual.acquisitions}</div>
+                            <div className="text-xs text-muted-foreground">計画: {channel.planned.acquisitions}</div>
+                            <div className={`text-sm font-medium mt-1 flex items-center justify-center gap-1 ${
+                              getVarianceColor(channel.variance.acquisitions)
+                            }`}>
+                              {getVarianceIcon(channel.variance.acquisitions)}
+                              {channel.variance.acquisitions > 0 ? '+' : ''}{channel.variance.acquisitions}
+                              ({channel.variance.acquisitionsPercent > 0 ? '+' : ''}{channel.variance.acquisitionsPercent.toFixed(1)}%)
+                            </div>
+                          </div>
+
+                          {/* CPA */}
+                          <div className="text-center p-3 bg-gray-50 rounded">
+                            <div className="text-sm text-muted-foreground mb-1">CPA</div>
+                            <div className="text-lg font-bold">¥{channel.actual.cpa.toLocaleString()}</div>
+                            <div className="text-xs text-muted-foreground">計画: ¥{channel.planned.cpa.toLocaleString()}</div>
+                            <div className={`text-sm font-medium mt-1 flex items-center justify-center gap-1 ${
+                              getVarianceColor(channel.variance.cpa, true)
+                            }`}>
+                              {getVarianceIcon(channel.variance.cpa, true)}
+                              ¥{Math.abs(channel.variance.cpa).toLocaleString()}
+                              ({channel.variance.cpaPercent > 0 ? '+' : ''}{channel.variance.cpaPercent.toFixed(1)}%)
+                            </div>
+                          </div>
+
+                          {/* コスト */}
+                          <div className="text-center p-3 bg-gray-50 rounded">
+                            <div className="text-sm text-muted-foreground mb-1">総コスト</div>
+                            <div className="text-lg font-bold">¥{channel.actual.cost.toLocaleString()}</div>
+                            <div className="text-xs text-muted-foreground">計画: ¥{channel.planned.cost.toLocaleString()}</div>
+                            <div className={`text-sm font-medium mt-1 flex items-center justify-center gap-1 ${
+                              getVarianceColor(channel.variance.cost, true)
+                            }`}>
+                              {getVarianceIcon(channel.variance.cost, true)}
+                              ¥{Math.abs(channel.variance.cost).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* チャネル別パフォーマンスグラフ */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>チャネル別CPA比較</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={channelVariances}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" fontSize={12} />
+                        <YAxis fontSize={12} />
+                        <Tooltip 
+                          formatter={(value: number, name: string) => [
+                            `¥${value.toLocaleString()}`,
+                            name === 'planned.cpa' ? '計画CPA' : '実績CPA'
+                          ]}
+                        />
+                        <Legend />
+                        <Bar dataKey="planned.cpa" fill="#3b82f6" name="計画CPA" />
+                        <Bar dataKey="actual.cpa" fill="#10b981" name="実績CPA" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </main>
         </div>
       </AppLayout>
