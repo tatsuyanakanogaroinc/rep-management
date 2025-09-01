@@ -31,25 +31,7 @@ import {
   Radio
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line } from 'recharts';
-
-interface PlanData {
-  month: string;
-  monthLabel: string;
-  newAcquisitions: number;
-  totalCustomers: number;
-  churnCount: number;
-  mrr: number;
-  expenses: number;
-  profit: number;
-  channels: ChannelPlan[];
-}
-
-interface ChannelPlan {
-  name: string;
-  plannedAcquisitions: number;
-  plannedCpa: number;
-  plannedCost: number;
-}
+import { useMonthlyPlanning, type MonthlyPlan, type ChannelPlan } from '@/hooks/useMonthlyPlanning';
 
 interface ActualData {
   month: string;
@@ -79,6 +61,7 @@ interface VarianceData {
 
 export default function PlanVsActualPage() {
   const { userProfile } = useAuthContext();
+  const { getPlanForMonth } = useMonthlyPlanning();
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return format(now, 'yyyy-MM');
@@ -87,39 +70,59 @@ export default function PlanVsActualPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // 月次計画データ（実際の実装では月次計画から取得）
-  const [planData, setPlanData] = useState<PlanData>({
+  // 月次計画データを取得
+  const planData = getPlanForMonth(selectedMonth) || {
     month: selectedMonth,
     monthLabel: format(new Date(selectedMonth + '-01'), 'yyyy年MM月', { locale: ja }),
-    newAcquisitions: 35,
-    totalCustomers: 150,
-    churnCount: 8,
-    mrr: 746000,
-    expenses: 710000,
-    profit: 36000,
-    channels: [
-      { name: 'Google広告', plannedAcquisitions: 14, plannedCpa: 6000, plannedCost: 84000 },
-      { name: 'Facebook広告', plannedAcquisitions: 11, plannedCpa: 7000, plannedCost: 77000 },
-      { name: '紹介', plannedAcquisitions: 7, plannedCpa: 0, plannedCost: 0 },
-      { name: 'オーガニック検索', plannedAcquisitions: 3, plannedCpa: 0, plannedCost: 0 }
-    ]
-  });
+    newAcquisitions: 0,
+    totalCustomers: 0,
+    churnCount: 0,
+    mrr: 0,
+    expenses: 0,
+    profit: 0,
+    channels: [],
+    pl: {
+      revenue: { monthlySubscription: 0, yearlySubscription: 0, total: 0 },
+      costs: { channelCosts: 0, operatingExpenses: 0, total: 0 },
+      grossProfit: 0,
+      grossMargin: 0,
+      netProfit: 0,
+      netMargin: 0
+    }
+  } as MonthlyPlan;
 
-  // 実績データ
-  const [actualData, setActualData] = useState<ActualData>({
+  // 実績データ（月次計画のチャネル構成に基づいて初期化）
+  const [actualData, setActualData] = useState<ActualData>(() => ({
     month: selectedMonth,
     newAcquisitions: 0,
     totalCustomers: 0,
     churnCount: 0,
     mrr: 0,
     expenses: 0,
-    channels: [
-      { name: 'Google広告', actualAcquisitions: 0, actualCpa: 0, actualCost: 0 },
-      { name: 'Facebook広告', actualAcquisitions: 0, actualCpa: 0, actualCost: 0 },
-      { name: '紹介', actualAcquisitions: 0, actualCpa: 0, actualCost: 0 },
-      { name: 'オーガニック検索', actualAcquisitions: 0, actualCpa: 0, actualCost: 0 }
-    ]
-  });
+    channels: planData.channels.map(channel => ({
+      name: channel.name,
+      actualAcquisitions: 0,
+      actualCpa: 0,
+      actualCost: 0
+    }))
+  }));
+
+  // 月が変更されたときに実績データのチャネル構成を更新
+  useEffect(() => {
+    setActualData(prev => ({
+      ...prev,
+      month: selectedMonth,
+      channels: planData.channels.map(channel => {
+        const existingChannel = prev.channels.find(c => c.name === channel.name);
+        return existingChannel || {
+          name: channel.name,
+          actualAcquisitions: 0,
+          actualCpa: 0,
+          actualCost: 0
+        };
+      })
+    }));
+  }, [selectedMonth, planData.channels]);
 
   // 過去12ヶ月の選択肢を生成
   const generateMonthOptions = () => {
@@ -209,19 +212,19 @@ export default function PlanVsActualPage() {
   };
 
   // チャネル実績更新
-  const handleChannelActualChange = (index: number, field: keyof ChannelActual, value: number) => {
+  const handleChannelActualChange = (channelName: string, field: keyof ChannelActual, value: number) => {
     setActualData(prev => ({
       ...prev,
-      channels: prev.channels.map((channel, i) => 
-        i === index ? { ...channel, [field]: value } : channel
+      channels: prev.channels.map(channel => 
+        channel.name === channelName ? { ...channel, [field]: value } : channel
       )
     }));
   };
 
   // チャネル別CPA差異計算
   const calculateChannelVariances = () => {
-    return planData.channels.map((plannedChannel, index) => {
-      const actualChannel = actualData.channels[index];
+    return planData.channels.map((plannedChannel) => {
+      const actualChannel = actualData.channels.find(c => c.name === plannedChannel.name);
       if (!actualChannel) return null;
 
       const cpaVariance = actualChannel.actualCpa - plannedChannel.plannedCpa;
@@ -231,6 +234,8 @@ export default function PlanVsActualPage() {
       const acquisitionVariancePercent = plannedChannel.plannedAcquisitions > 0 ? 
         (acquisitionVariance / plannedChannel.plannedAcquisitions) * 100 : 0;
       const costVariance = actualChannel.actualCost - plannedChannel.plannedCost;
+      const costVariancePercent = plannedChannel.plannedCost > 0 ? 
+        (costVariance / plannedChannel.plannedCost) * 100 : 0;
 
       return {
         name: plannedChannel.name,
@@ -249,7 +254,8 @@ export default function PlanVsActualPage() {
           acquisitionsPercent: acquisitionVariancePercent,
           cpa: cpaVariance,
           cpaPercent: cpaVariancePercent,
-          cost: costVariance
+          cost: costVariance,
+          costPercent: costVariancePercent
         }
       };
     }).filter(Boolean);
@@ -732,6 +738,9 @@ export default function PlanVsActualPage() {
                               <div className="text-xs text-muted-foreground">
                                 CPA: {channel.plannedCpa > 0 ? `¥${channel.plannedCpa.toLocaleString()}` : '無料'}
                               </div>
+                              <div className="text-xs text-muted-foreground">
+                                コスト: ¥{channel.plannedCost.toLocaleString()}
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -757,49 +766,53 @@ export default function PlanVsActualPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {actualData.channels.map((channel, index) => (
-                      <div key={index} className="border rounded-lg p-4 space-y-3">
-                        <h4 className="font-medium">{channel.name}</h4>
-                        <div className="grid grid-cols-3 gap-3">
-                          <div>
-                            <Label className="text-xs">獲得数</Label>
-                            <Input
-                              type="number"
-                              value={channel.actualAcquisitions}
-                              onChange={(e) => handleChannelActualChange(index, 'actualAcquisitions', parseInt(e.target.value) || 0)}
-                              placeholder="0"
-                            />
-                            <p className="text-xs text-muted-foreground mt-1">
-                              計画: {planData.channels[index]?.plannedAcquisitions || 0}人
-                            </p>
-                          </div>
-                          <div>
-                            <Label className="text-xs">実際のCPA</Label>
-                            <Input
-                              type="number"
-                              value={channel.actualCpa}
-                              onChange={(e) => handleChannelActualChange(index, 'actualCpa', parseInt(e.target.value) || 0)}
-                              placeholder="0"
-                            />
-                            <p className="text-xs text-muted-foreground mt-1">
-                              計画: ¥{planData.channels[index]?.plannedCpa.toLocaleString() || 0}
-                            </p>
-                          </div>
-                          <div>
-                            <Label className="text-xs">実際のコスト</Label>
-                            <Input
-                              type="number"
-                              value={channel.actualCost}
-                              onChange={(e) => handleChannelActualChange(index, 'actualCost', parseInt(e.target.value) || 0)}
-                              placeholder="0"
-                            />
-                            <p className="text-xs text-muted-foreground mt-1">
-                              計画: ¥{planData.channels[index]?.plannedCost.toLocaleString() || 0}
-                            </p>
+                    {actualData.channels.map((channel) => {
+                      const plannedChannel = planData.channels.find(p => p.name === channel.name);
+                      
+                      return (
+                        <div key={channel.name} className="border rounded-lg p-4 space-y-3">
+                          <h4 className="font-medium">{channel.name}</h4>
+                          <div className="grid grid-cols-3 gap-3">
+                            <div>
+                              <Label className="text-xs">獲得数</Label>
+                              <Input
+                                type="number"
+                                value={channel.actualAcquisitions}
+                                onChange={(e) => handleChannelActualChange(channel.name, 'actualAcquisitions', parseInt(e.target.value) || 0)}
+                                placeholder="0"
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                計画: {plannedChannel?.plannedAcquisitions || 0}人
+                              </p>
+                            </div>
+                            <div>
+                              <Label className="text-xs">実際のCPA</Label>
+                              <Input
+                                type="number"
+                                value={channel.actualCpa}
+                                onChange={(e) => handleChannelActualChange(channel.name, 'actualCpa', parseInt(e.target.value) || 0)}
+                                placeholder="0"
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                計画: {plannedChannel?.plannedCpa ? `¥${plannedChannel.plannedCpa.toLocaleString()}` : '無料'}
+                              </p>
+                            </div>
+                            <div>
+                              <Label className="text-xs">実際のコスト</Label>
+                              <Input
+                                type="number"
+                                value={channel.actualCost}
+                                onChange={(e) => handleChannelActualChange(channel.name, 'actualCost', parseInt(e.target.value) || 0)}
+                                placeholder="0"
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                計画: {plannedChannel?.plannedCost ? `¥${plannedChannel.plannedCost.toLocaleString()}` : '¥0'}
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </CardContent>
                 </Card>
 
@@ -912,6 +925,7 @@ export default function PlanVsActualPage() {
                             }`}>
                               {getVarianceIcon(channel.variance.cost, true)}
                               ¥{Math.abs(channel.variance.cost).toLocaleString()}
+                              ({channel.variance.costPercent > 0 ? '+' : ''}{channel.variance.costPercent.toFixed(1)}%)
                             </div>
                           </div>
                         </div>

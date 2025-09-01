@@ -29,189 +29,46 @@ import {
   Zap,
   Plus,
   Trash2,
-  Radio
+  Radio,
+  FileText
 } from 'lucide-react';
 import { useGrowthParameters } from '@/hooks/useGrowthParameters';
 import { usePricingSettings } from '@/hooks/usePricingSettings';
+import { useMonthlyPlanning } from '@/hooks/useMonthlyPlanning';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, BarChart, Bar } from 'recharts';
-
-interface MonthlyPlan {
-  month: string;
-  monthLabel: string;
-  newAcquisitions: number;
-  totalCustomers: number;
-  churnCount: number;
-  retainedCustomers: number;
-  mrr: number;
-  expenses: number;
-  profit: number;
-  cumulativeProfit: number;
-}
-
-interface ChannelSetting {
-  name: string;
-  cpa: number;
-  ratio: number;
-  isActive: boolean;
-}
-
-interface PlanningParameters {
-  initialAcquisitions: number;
-  monthlyGrowthRate: number;
-  churnRate: number;
-  monthlyPrice: number;
-  yearlyPrice: number;
-  baseExpenses: number;
-  expenseGrowthRate: number;
-  planningHorizon: number;
-  channels: ChannelSetting[];
-}
 
 export default function MonthlyPlanningPage() {
   const { userProfile } = useAuthContext();
-  const { data: growthParams, updateParameters } = useGrowthParameters();
+  const { data: growthParams, updateParameters: updateGrowthParams } = useGrowthParameters();
   const { data: pricingSettings, updatePricing } = usePricingSettings();
+  const { parameters, monthlyPlans, updateParameters, updateChannels } = useMonthlyPlanning();
   
   const [isCalculating, setIsCalculating] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  
-  const [parameters, setParameters] = useState<PlanningParameters>({
-    initialAcquisitions: 30,
-    monthlyGrowthRate: 15,
-    churnRate: 5.0,
-    monthlyPrice: 4980,
-    yearlyPrice: 49800,
-    baseExpenses: 500000,
-    expenseGrowthRate: 5,
-    planningHorizon: 12,
-    channels: [
-      { name: 'Google広告', cpa: 6000, ratio: 40, isActive: true },
-      { name: 'Facebook広告', cpa: 7000, ratio: 30, isActive: true },
-      { name: '紹介', cpa: 0, ratio: 20, isActive: true },
-      { name: 'オーガニック検索', cpa: 0, ratio: 10, isActive: true }
-    ]
-  });
-
-  // 既存の設定値を反映
-  useEffect(() => {
-    if (growthParams && pricingSettings) {
-      setParameters(prev => ({
-        ...prev,
-        initialAcquisitions: growthParams.initial_acquisitions,
-        monthlyGrowthRate: growthParams.monthly_growth_rate,
-        churnRate: growthParams.churn_rate,
-        monthlyPrice: pricingSettings.monthly_price,
-        yearlyPrice: pricingSettings.yearly_price
-      }));
-    }
-  }, [growthParams, pricingSettings]);
-
-  // 月次計画を計算
-  const calculateMonthlyPlan = (): MonthlyPlan[] => {
-    const plans: MonthlyPlan[] = [];
-    let currentCustomers = 0;
-    let cumulativeProfit = 0;
-    
-    const currentDate = new Date();
-    const activeChannels = parameters.channels.filter(c => c.isActive);
-    const totalRatio = activeChannels.reduce((sum, c) => sum + c.ratio, 0);
-    
-    for (let i = 0; i < parameters.planningHorizon; i++) {
-      const monthDate = addMonths(currentDate, i);
-      const month = format(monthDate, 'yyyy-MM');
-      const monthLabel = format(monthDate, 'yyyy年MM月', { locale: ja });
-      
-      // 新規獲得数（成長率適用）
-      const newAcquisitions = Math.round(
-        parameters.initialAcquisitions * Math.pow(1 + parameters.monthlyGrowthRate / 100, i)
-      );
-      
-      // チャーン数
-      const churnCount = Math.round(currentCustomers * parameters.churnRate / 100);
-      
-      // 継続顧客数
-      const retainedCustomers = Math.max(0, currentCustomers - churnCount);
-      
-      // 総顧客数更新
-      currentCustomers = retainedCustomers + newAcquisitions;
-      
-      // MRR計算（月額:70%, 年額:30%の想定）
-      const monthlyCustomers = Math.round(newAcquisitions * 0.7);
-      const yearlyCustomers = Math.round(newAcquisitions * 0.3);
-      const mrr = (monthlyCustomers * parameters.monthlyPrice) + 
-                  (yearlyCustomers * Math.round(parameters.yearlyPrice / 12));
-      
-      // 流入経路別の広告費計算
-      let channelCosts = 0;
-      if (totalRatio > 0) {
-        activeChannels.forEach(channel => {
-          const channelAcquisitions = Math.round(newAcquisitions * (channel.ratio / totalRatio));
-          channelCosts += channelAcquisitions * channel.cpa;
-        });
-      }
-      
-      // 支出計算（基本支出 + 成長に伴う増加 + 流入経路コスト）
-      const baseExpensesForMonth = Math.round(
-        parameters.baseExpenses * Math.pow(1 + parameters.expenseGrowthRate / 100, i)
-      );
-      const expenses = baseExpensesForMonth + channelCosts;
-      
-      // 利益計算
-      const profit = mrr - expenses;
-      cumulativeProfit += profit;
-      
-      plans.push({
-        month,
-        monthLabel,
-        newAcquisitions,
-        totalCustomers: currentCustomers,
-        churnCount,
-        retainedCustomers,
-        mrr,
-        expenses,
-        profit,
-        cumulativeProfit
-      });
-    }
-    
-    return plans;
-  };
-
-  const monthlyPlans = calculateMonthlyPlan();
 
   // パラメータ更新ハンドラー
-  const handleParameterChange = (field: keyof PlanningParameters, value: number) => {
-    setParameters(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  const handleParameterChange = (field: string, value: number) => {
+    updateParameters({ [field]: value });
   };
-
+  
   // 流入経路の更新
-  const handleChannelChange = (index: number, field: keyof ChannelSetting, value: number | boolean | string) => {
-    setParameters(prev => ({
-      ...prev,
-      channels: prev.channels.map((channel, i) => 
-        i === index ? { ...channel, [field]: value } : channel
-      )
-    }));
+  const handleChannelChange = (index: number, field: string, value: number | boolean | string) => {
+    const newChannels = [...parameters.channels];
+    newChannels[index] = { ...newChannels[index], [field]: value };
+    updateChannels(newChannels);
   };
-
+  
   // 流入経路の追加
   const addChannel = () => {
-    setParameters(prev => ({
-      ...prev,
-      channels: [...prev.channels, { name: '新しいチャネル', cpa: 5000, ratio: 0, isActive: true }]
-    }));
+    const newChannels = [...parameters.channels, { name: '新しいチャネル', cpa: 5000, ratio: 0, isActive: true }];
+    updateChannels(newChannels);
   };
-
+  
   // 流入経路の削除
   const removeChannel = (index: number) => {
-    setParameters(prev => ({
-      ...prev,
-      channels: prev.channels.filter((_, i) => i !== index)
-    }));
+    const newChannels = parameters.channels.filter((_, i) => i !== index);
+    updateChannels(newChannels);
   };
 
   // 設定を保存
@@ -223,7 +80,7 @@ export default function MonthlyPlanningPage() {
     try {
       // 成長パラメータ更新
       if (growthParams) {
-        await updateParameters({
+        await updateGrowthParams({
           initial_acquisitions: parameters.initialAcquisitions,
           monthly_growth_rate: parameters.monthlyGrowthRate,
           churn_rate: parameters.churnRate,
@@ -318,9 +175,10 @@ export default function MonthlyPlanningPage() {
         {/* メインコンテンツ */}
         <main className="relative z-10 max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
           <Tabs defaultValue="simulation" className="space-y-8">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="simulation">計画シミュレーション</TabsTrigger>
               <TabsTrigger value="channels">流入経路設定</TabsTrigger>
+              <TabsTrigger value="pl">簡易PL</TabsTrigger>
               <TabsTrigger value="parameters">パラメータ設定</TabsTrigger>
               <TabsTrigger value="forecast">将来予測</TabsTrigger>
             </TabsList>
@@ -706,6 +564,325 @@ export default function MonthlyPlanningPage() {
                   </CardContent>
                 </Card>
               </div>
+            </TabsContent>
+
+            {/* 簡易PL */}
+            <TabsContent value="pl" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* 当月のPL */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="w-5 h-5" />
+                      {monthlyPlans[0]?.monthLabel} 損益計算書
+                    </CardTitle>
+                    <CardDescription>
+                      当月の詳細損益計算
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {monthlyPlans[0] && (
+                      <div className="space-y-4">
+                        {/* 売上 */}
+                        <div className="space-y-2">
+                          <h4 className="font-semibold text-blue-700 border-b pb-1">売上高</h4>
+                          <div className="ml-4 space-y-1 text-sm">
+                            <div className="flex justify-between">
+                              <span>月額サブスクリプション</span>
+                              <span>¥{monthlyPlans[0].pl.revenue.monthlySubscription.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>年額サブスクリプション（月割）</span>
+                              <span>¥{monthlyPlans[0].pl.revenue.yearlySubscription.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between font-semibold border-t pt-1">
+                              <span>売上高合計</span>
+                              <span>¥{monthlyPlans[0].pl.revenue.total.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 売上原価 */}
+                        <div className="space-y-2">
+                          <h4 className="font-semibold text-red-700 border-b pb-1">売上原価</h4>
+                          <div className="ml-4 space-y-1 text-sm">
+                            <div className="flex justify-between">
+                              <span>流入経路コスト</span>
+                              <span>¥{monthlyPlans[0].pl.costs.channelCosts.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between font-semibold border-t pt-1">
+                              <span>売上原価合計</span>
+                              <span>¥{monthlyPlans[0].pl.costs.channelCosts.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 売上総利益 */}
+                        <div className="bg-green-50 p-3 rounded">
+                          <div className="flex justify-between font-semibold text-green-700">
+                            <span>売上総利益</span>
+                            <span>¥{monthlyPlans[0].pl.grossProfit.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between text-sm text-green-600 mt-1">
+                            <span>売上総利益率</span>
+                            <span>{monthlyPlans[0].pl.grossMargin.toFixed(1)}%</span>
+                          </div>
+                        </div>
+
+                        {/* 営業費用 */}
+                        <div className="space-y-2">
+                          <h4 className="font-semibold text-orange-700 border-b pb-1">営業費用</h4>
+                          <div className="ml-4 space-y-1 text-sm">
+                            <div className="flex justify-between">
+                              <span>運営費・人件費・その他</span>
+                              <span>¥{monthlyPlans[0].pl.costs.operatingExpenses.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between font-semibold border-t pt-1">
+                              <span>営業費用合計</span>
+                              <span>¥{monthlyPlans[0].pl.costs.operatingExpenses.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 営業利益 */}
+                        <div className={`p-3 rounded ${monthlyPlans[0].pl.netProfit >= 0 ? 'bg-blue-50' : 'bg-red-50'}`}>
+                          <div className={`flex justify-between font-bold text-lg ${monthlyPlans[0].pl.netProfit >= 0 ? 'text-blue-700' : 'text-red-700'}`}>
+                            <span>営業利益</span>
+                            <span>¥{monthlyPlans[0].pl.netProfit.toLocaleString()}</span>
+                          </div>
+                          <div className={`flex justify-between text-sm mt-1 ${monthlyPlans[0].pl.netProfit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                            <span>営業利益率</span>
+                            <span>{monthlyPlans[0].pl.netMargin.toFixed(1)}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* PLトレンドグラフ */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5" />
+                      PL推移グラフ
+                    </CardTitle>
+                    <CardDescription>
+                      売上、原価、利益の推移
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={monthlyPlans.slice(0, 6)}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis 
+                            dataKey="monthLabel" 
+                            fontSize={10}
+                            interval={0}
+                          />
+                          <YAxis 
+                            fontSize={12}
+                            tickFormatter={(value) => `¥${(value / 1000).toFixed(0)}k`}
+                          />
+                          <Tooltip 
+                            formatter={(value: number, name: string) => [
+                              `¥${value.toLocaleString()}`,
+                              name === 'revenue.total' ? '売上高' :
+                              name === 'costs.channelCosts' ? '売上原価' :
+                              name === 'costs.operatingExpenses' ? '営業費用' :
+                              name === 'grossProfit' ? '売上総利益' :
+                              name === 'netProfit' ? '営業利益' : name
+                            ]}
+                          />
+                          <Legend />
+                          <Bar dataKey="pl.revenue.total" fill="#10b981" name="売上高" />
+                          <Bar dataKey="pl.costs.channelCosts" fill="#ef4444" name="売上原価" />
+                          <Bar dataKey="pl.costs.operatingExpenses" fill="#f59e0b" name="営業費用" />
+                          <Bar dataKey="pl.netProfit" fill="#3b82f6" name="営業利益" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* 月別PLテーブル */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="w-5 h-5" />
+                    月別損益計算書
+                  </CardTitle>
+                  <CardDescription>
+                    各月の詳細なPL計算結果
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b-2 border-gray-300">
+                          <th className="text-left p-3 font-semibold">月</th>
+                          <th className="text-right p-3 font-semibold">売上高</th>
+                          <th className="text-right p-3 font-semibold">売上原価</th>
+                          <th className="text-right p-3 font-semibold">売上総利益</th>
+                          <th className="text-right p-3 font-semibold">総利益率</th>
+                          <th className="text-right p-3 font-semibold">営業費用</th>
+                          <th className="text-right p-3 font-semibold">営業利益</th>
+                          <th className="text-right p-3 font-semibold">営業利益率</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {monthlyPlans.map((plan, index) => (
+                          <tr key={plan.month} className={`border-b hover:bg-gray-50 ${index === 0 ? 'bg-blue-50' : ''}`}>
+                            <td className="p-3 font-medium">
+                              {plan.monthLabel}
+                              {index === 0 && <Badge className="ml-2 text-xs">現在</Badge>}
+                            </td>
+                            <td className="text-right p-3 font-medium text-green-600">
+                              ¥{plan.pl.revenue.total.toLocaleString()}
+                            </td>
+                            <td className="text-right p-3 text-red-600">
+                              ¥{plan.pl.costs.channelCosts.toLocaleString()}
+                            </td>
+                            <td className="text-right p-3 font-medium text-green-700">
+                              ¥{plan.pl.grossProfit.toLocaleString()}
+                            </td>
+                            <td className="text-right p-3 text-green-600">
+                              {plan.pl.grossMargin.toFixed(1)}%
+                            </td>
+                            <td className="text-right p-3 text-orange-600">
+                              ¥{plan.pl.costs.operatingExpenses.toLocaleString()}
+                            </td>
+                            <td className={`text-right p-3 font-bold ${plan.pl.netProfit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                              ¥{plan.pl.netProfit.toLocaleString()}
+                            </td>
+                            <td className={`text-right p-3 font-semibold ${plan.pl.netMargin >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                              {plan.pl.netMargin.toFixed(1)}%
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* PL分析指標 */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">
+                        {monthlyPlans[0]?.pl.grossMargin.toFixed(1) || 0}%
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        当月売上総利益率
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <div className={`text-2xl font-bold ${monthlyPlans[0]?.pl.netMargin >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                        {monthlyPlans[0]?.pl.netMargin.toFixed(1) || 0}%
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        当月営業利益率
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-purple-600">
+                        ¥{(() => {
+                          const avgGrossProfit = monthlyPlans.reduce((sum, plan) => sum + plan.pl.grossProfit, 0) / monthlyPlans.length;
+                          return avgGrossProfit.toLocaleString();
+                        })()}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        平均売上総利益
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-orange-600">
+                        {(() => {
+                          const avgNetMargin = monthlyPlans.reduce((sum, plan) => sum + plan.pl.netMargin, 0) / monthlyPlans.length;
+                          return avgNetMargin.toFixed(1);
+                        })()}%
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        平均営業利益率
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* 利益率推移グラフ */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5" />
+                    利益率推移
+                  </CardTitle>
+                  <CardDescription>
+                    売上総利益率と営業利益率の推移
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={monthlyPlans}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="monthLabel" 
+                          fontSize={12}
+                          interval="preserveStartEnd"
+                        />
+                        <YAxis 
+                          fontSize={12}
+                          tickFormatter={(value) => `${value}%`}
+                        />
+                        <Tooltip 
+                          formatter={(value: number, name: string) => [
+                            `${value.toFixed(1)}%`,
+                            name === 'pl.grossMargin' ? '売上総利益率' : '営業利益率'
+                          ]}
+                        />
+                        <Legend />
+                        <Line 
+                          type="monotone" 
+                          dataKey="pl.grossMargin" 
+                          stroke="#10b981" 
+                          strokeWidth={3}
+                          name="売上総利益率"
+                          dot={{ fill: '#10b981', strokeWidth: 2, r: 5 }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="pl.netMargin" 
+                          stroke="#3b82f6" 
+                          strokeWidth={3}
+                          name="営業利益率"
+                          dot={{ fill: '#3b82f6', strokeWidth: 2, r: 5 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* パラメータ設定 */}
