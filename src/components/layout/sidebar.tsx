@@ -155,28 +155,26 @@ export function Sidebar() {
             )}
           </Button>
         ) : (
-          <Link href={item.href}>
-            <Button
-              variant="ghost"
-              className={`w-full justify-start h-auto p-3 ${
-                active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'
-              } ${depth > 0 ? 'pl-8' : ''}`}
-              onClick={() => setIsMobileOpen(false)}
-            >
-              <div className="flex items-center gap-3">
-                {item.icon}
-                {!isCollapsed && (
-                  <>
-                    <span className="font-medium">{item.label}</span>
-                    {item.badge && (
-                      <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
-                        {item.badge}
-                      </Badge>
-                    )}
-                  </>
-                )}
-              </div>
-            </Button>
+          <Link 
+            href={item.href}
+            className={`block w-full p-3 rounded-md transition-colors ${
+              active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-gray-100'
+            } ${depth > 0 ? 'pl-8' : ''}`}
+            onClick={() => setIsMobileOpen(false)}
+          >
+            <div className="flex items-center gap-3">
+              {item.icon}
+              {!isCollapsed && (
+                <>
+                  <span className="font-medium">{item.label}</span>
+                  {item.badge && (
+                    <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+                      {item.badge}
+                    </Badge>
+                  )}
+                </>
+              )}
+            </div>
           </Link>
         )}
         
