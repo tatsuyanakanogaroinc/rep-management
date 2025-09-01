@@ -3,6 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, ComposedChart } from 'recharts';
 import { useState } from 'react';
 import { format, subMonths, addMonths } from 'date-fns';
@@ -100,6 +101,7 @@ export function MonthlyTrendChart({ currentMonth }: MonthlyTrendChartProps) {
         </div>
       </div>
     );
+  };
 
   // チャート設定
   const chartConfigs = {

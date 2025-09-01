@@ -77,9 +77,11 @@ export default function PlanVsActualPage() {
     newAcquisitions: 0,
     totalCustomers: 0,
     churnCount: 0,
+    retainedCustomers: 0,
     mrr: 0,
     expenses: 0,
     profit: 0,
+    cumulativeProfit: 0,
     channels: [],
     pl: {
       revenue: { monthlySubscription: 0, yearlySubscription: 0, total: 0 },
@@ -883,8 +885,9 @@ export default function PlanVsActualPage() {
                 <CardContent>
                   <div className="space-y-6">
                     {channelVariances.map((channel, index) => (
-                      <div key={index} className="border rounded-lg p-4">
-                        <h4 className="font-semibold text-lg mb-4">{channel.name}</h4>
+                      channel && (
+                        <div key={index} className="border rounded-lg p-4">
+                          <h4 className="font-semibold text-lg mb-4">{channel.name}</h4>
                         
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           {/* 獲得数 */}
@@ -929,7 +932,8 @@ export default function PlanVsActualPage() {
                             </div>
                           </div>
                         </div>
-                      </div>
+                        </div>
+                      )
                     ))}
                   </div>
                 </CardContent>
