@@ -66,7 +66,7 @@ export default function CustomersPage() {
             </div>
           </div>
 
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* メインコンテンツ */}
             <div className="lg:col-span-3">
