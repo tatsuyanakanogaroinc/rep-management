@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 import { useState, useEffect } from 'react';
 import { format, addMonths } from 'date-fns';
 import { ja } from 'date-fns/locale';
@@ -25,7 +26,10 @@ import {
   AlertCircle,
   CheckCircle,
   RefreshCw,
-  Zap
+  Zap,
+  Plus,
+  Trash2,
+  Radio
 } from 'lucide-react';
 import { useGrowthParameters } from '@/hooks/useGrowthParameters';
 import { usePricingSettings } from '@/hooks/usePricingSettings';
@@ -44,6 +48,13 @@ interface MonthlyPlan {
   cumulativeProfit: number;
 }
 
+interface ChannelSetting {
+  name: string;
+  cpa: number;
+  ratio: number;
+  isActive: boolean;
+}
+
 interface PlanningParameters {
   initialAcquisitions: number;
   monthlyGrowthRate: number;
@@ -53,6 +64,7 @@ interface PlanningParameters {
   baseExpenses: number;
   expenseGrowthRate: number;
   planningHorizon: number;
+  channels: ChannelSetting[];
 }
 
 export default function MonthlyPlanningPage() {
@@ -72,7 +84,13 @@ export default function MonthlyPlanningPage() {
     yearlyPrice: 49800,
     baseExpenses: 500000,
     expenseGrowthRate: 5,
-    planningHorizon: 12
+    planningHorizon: 12,
+    channels: [
+      { name: 'Google広告', cpa: 6000, ratio: 40, isActive: true },
+      { name: 'Facebook広告', cpa: 7000, ratio: 30, isActive: true },
+      { name: '紹介', cpa: 0, ratio: 20, isActive: true },
+      { name: 'オーガニック検索', cpa: 0, ratio: 10, isActive: true }
+    ]
   });
 
   // 既存の設定値を反映
@@ -96,6 +114,8 @@ export default function MonthlyPlanningPage() {
     let cumulativeProfit = 0;
     
     const currentDate = new Date();
+    const activeChannels = parameters.channels.filter(c => c.isActive);
+    const totalRatio = activeChannels.reduce((sum, c) => sum + c.ratio, 0);
     
     for (let i = 0; i < parameters.planningHorizon; i++) {
       const monthDate = addMonths(currentDate, i);
@@ -122,10 +142,20 @@ export default function MonthlyPlanningPage() {
       const mrr = (monthlyCustomers * parameters.monthlyPrice) + 
                   (yearlyCustomers * Math.round(parameters.yearlyPrice / 12));
       
-      // 支出計算（基本支出 + 成長に伴う増加）
-      const expenses = Math.round(
+      // 流入経路別の広告費計算
+      let channelCosts = 0;
+      if (totalRatio > 0) {
+        activeChannels.forEach(channel => {
+          const channelAcquisitions = Math.round(newAcquisitions * (channel.ratio / totalRatio));
+          channelCosts += channelAcquisitions * channel.cpa;
+        });
+      }
+      
+      // 支出計算（基本支出 + 成長に伴う増加 + 流入経路コスト）
+      const baseExpensesForMonth = Math.round(
         parameters.baseExpenses * Math.pow(1 + parameters.expenseGrowthRate / 100, i)
       );
+      const expenses = baseExpensesForMonth + channelCosts;
       
       // 利益計算
       const profit = mrr - expenses;
@@ -155,6 +185,32 @@ export default function MonthlyPlanningPage() {
     setParameters(prev => ({
       ...prev,
       [field]: value
+    }));
+  };
+
+  // 流入経路の更新
+  const handleChannelChange = (index: number, field: keyof ChannelSetting, value: number | boolean | string) => {
+    setParameters(prev => ({
+      ...prev,
+      channels: prev.channels.map((channel, i) => 
+        i === index ? { ...channel, [field]: value } : channel
+      )
+    }));
+  };
+
+  // 流入経路の追加
+  const addChannel = () => {
+    setParameters(prev => ({
+      ...prev,
+      channels: [...prev.channels, { name: '新しいチャネル', cpa: 5000, ratio: 0, isActive: true }]
+    }));
+  };
+
+  // 流入経路の削除
+  const removeChannel = (index: number) => {
+    setParameters(prev => ({
+      ...prev,
+      channels: prev.channels.filter((_, i) => i !== index)
     }));
   };
 
@@ -262,8 +318,9 @@ export default function MonthlyPlanningPage() {
         {/* メインコンテンツ */}
         <main className="relative z-10 max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
           <Tabs defaultValue="simulation" className="space-y-8">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="simulation">計画シミュレーション</TabsTrigger>
+              <TabsTrigger value="channels">流入経路設定</TabsTrigger>
               <TabsTrigger value="parameters">パラメータ設定</TabsTrigger>
               <TabsTrigger value="forecast">将来予測</TabsTrigger>
             </TabsList>
@@ -494,6 +551,161 @@ export default function MonthlyPlanningPage() {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* 流入経路設定 */}
+            <TabsContent value="channels" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* 流入経路設定カード */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Radio className="w-5 h-5" />
+                      流入経路設定
+                    </CardTitle>
+                    <CardDescription>
+                      各チャネルのCPAと流入割合を設定
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {parameters.channels.map((channel, index) => (
+                      <div key={index} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Input
+                            value={channel.name}
+                            onChange={(e) => handleChannelChange(index, 'name', e.target.value)}
+                            className="font-medium"
+                            placeholder="チャネル名"
+                          />
+                          <div className="flex items-center gap-2">
+                            <Badge variant={channel.isActive ? "default" : "outline"}>
+                              {channel.isActive ? '有効' : '無効'}
+                            </Badge>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => removeChannel(index)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>CPA（円）</Label>
+                            <Input
+                              type="number"
+                              value={channel.cpa}
+                              onChange={(e) => handleChannelChange(index, 'cpa', parseInt(e.target.value) || 0)}
+                              placeholder="5000"
+                            />
+                          </div>
+                          <div>
+                            <Label>流入割合（%）</Label>
+                            <Input
+                              type="number"
+                              value={channel.ratio}
+                              onChange={(e) => handleChannelChange(index, 'ratio', parseInt(e.target.value) || 0)}
+                              placeholder="30"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            checked={channel.isActive}
+                            onCheckedChange={(checked) => handleChannelChange(index, 'isActive', checked)}
+                          />
+                          <Label>このチャネルを有効にする</Label>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    <Button
+                      onClick={addChannel}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      流入経路を追加
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* 流入経路サマリー */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5" />
+                      流入経路サマリー
+                    </CardTitle>
+                    <CardDescription>
+                      現在の設定による月次コスト予測
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* 総流入割合チェック */}
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium">総流入割合</span>
+                          <span className={`font-bold ${
+                            parameters.channels.filter(c => c.isActive).reduce((sum, c) => sum + c.ratio, 0) === 100 
+                              ? 'text-green-600' : 'text-orange-600'
+                          }`}>
+                            {parameters.channels.filter(c => c.isActive).reduce((sum, c) => sum + c.ratio, 0)}%
+                          </span>
+                        </div>
+                        {parameters.channels.filter(c => c.isActive).reduce((sum, c) => sum + c.ratio, 0) !== 100 && (
+                          <p className="text-xs text-orange-600 mt-1">
+                            ⚠ 合計が100%ではありません
+                          </p>
+                        )}
+                      </div>
+
+                      {/* チャネル別予測 */}
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm">初月の予測（{parameters.initialAcquisitions}人獲得）</h4>
+                        {parameters.channels.filter(c => c.isActive).map((channel, index) => {
+                          const totalActiveRatio = parameters.channels.filter(c => c.isActive).reduce((sum, c) => sum + c.ratio, 0);
+                          const acquisitions = totalActiveRatio > 0 ? Math.round(parameters.initialAcquisitions * (channel.ratio / totalActiveRatio)) : 0;
+                          const cost = acquisitions * channel.cpa;
+                          
+                          return (
+                            <div key={index} className="flex justify-between items-center p-2 bg-white rounded border">
+                              <span className="text-sm">{channel.name}</span>
+                              <div className="text-right">
+                                <div className="text-sm font-medium">{acquisitions}人</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {cost > 0 ? `¥${cost.toLocaleString()}` : '無料'}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* 総コスト */}
+                      <div className="p-3 bg-blue-50 rounded-lg">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium">初月の総広告費</span>
+                          <span className="font-bold text-blue-600">
+                            ¥{(() => {
+                              const totalActiveRatio = parameters.channels.filter(c => c.isActive).reduce((sum, c) => sum + c.ratio, 0);
+                              return parameters.channels.filter(c => c.isActive).reduce((sum, channel) => {
+                                const acquisitions = totalActiveRatio > 0 ? Math.round(parameters.initialAcquisitions * (channel.ratio / totalActiveRatio)) : 0;
+                                return sum + (acquisitions * channel.cpa);
+                              }, 0).toLocaleString();
+                            })()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
 
             {/* パラメータ設定 */}
