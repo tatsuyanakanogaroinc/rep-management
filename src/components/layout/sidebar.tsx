@@ -50,14 +50,10 @@ export function Sidebar() {
       icon: <LayoutDashboard className="w-5 h-5" />
     },
     {
-      href: '/customers',
-      label: '顧客管理',
-      icon: <Users className="w-5 h-5" />
-    },
-    {
-      href: '/expenses',
-      label: '支出管理',
-      icon: <CreditCard className="w-5 h-5" />
+      href: '/monthly-planning',
+      label: '月次計画',
+      icon: <Calculator className="w-5 h-5" />,
+      badge: 'New'
     },
     {
       href: '/cohort-analysis',
@@ -69,17 +65,6 @@ export function Sidebar() {
       label: 'AI分析・予測',
       icon: <Brain className="w-5 h-5" />,
       badge: 'AI'
-    },
-    {
-      href: '/targets',
-      label: '目標管理',
-      icon: <Target className="w-5 h-5" />
-    },
-    {
-      href: '/monthly-planning',
-      label: '月次計画',
-      icon: <Calculator className="w-5 h-5" />,
-      badge: 'New'
     },
     {
       href: '/monthly-report',
@@ -94,18 +79,6 @@ export function Sidebar() {
   ];
 
   const settingsItems: NavigationItem[] = [
-    {
-      href: '/settings/growth-parameters',
-      label: '成長パラメータ',
-      icon: <TrendingUp className="w-5 h-5" />,
-      adminOnly: true
-    },
-    {
-      href: '/settings/pricing',
-      label: '料金設定',
-      icon: <DollarSign className="w-5 h-5" />,
-      adminOnly: true
-    },
     {
       href: '/settings/users',
       label: 'ユーザー管理',
