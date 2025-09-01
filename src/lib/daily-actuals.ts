@@ -61,6 +61,11 @@ export async function getDailyActuals(userId: string, month: string): Promise<Da
       .order('date', { ascending: true });
 
     if (error) {
+      // テーブルが存在しない場合は空配列を返す
+      if (error.code === '42P01') {
+        console.warn('daily_actualsテーブルが存在しません。マイグレーションを実行してください。');
+        return [];
+      }
       console.error('日次実績取得エラー:', error);
       return [];
     }
@@ -81,7 +86,16 @@ export async function getDailyActual(userId: string, date: string): Promise<Dail
       .eq('date', date)
       .single();
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
+      // テーブルが存在しない場合
+      if (error.code === '42P01') {
+        console.warn('daily_actualsテーブルが存在しません。マイグレーションを実行してください。');
+        return null;
+      }
+      // データが見つからない場合は正常
+      if (error.code === 'PGRST116') {
+        return null;
+      }
       console.error('日次実績取得エラー:', error);
       return null;
     }
