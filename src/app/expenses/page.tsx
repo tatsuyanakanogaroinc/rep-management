@@ -60,17 +60,17 @@ export default function ExpensesPage() {
                   <h1 className="text-2xl font-bold text-gray-900">支出管理</h1>
                   <p className="text-gray-600">支出の登録・承認・管理</p>
                 </div>
-              </div>
-              <div className="flex items-center space-x-4">
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">
-                    {userProfile?.name || user?.email}
-                  </p>
-                  <p className="text-xs text-gray-500">{userProfile?.role}</p>
+                <div className="flex items-center space-x-4">
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-900">
+                      {userProfile?.name || user?.email}
+                    </p>
+                    <p className="text-xs text-gray-500">{userProfile?.role}</p>
+                  </div>
+                  <Button variant="outline" onClick={handleSignOut}>
+                    ログアウト
+                  </Button>
                 </div>
-                <Button variant="outline" onClick={handleSignOut}>
-                  ログアウト
-                </Button>
               </div>
             </div>
           </div>

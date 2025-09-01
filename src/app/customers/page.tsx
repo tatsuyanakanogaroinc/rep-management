@@ -51,21 +51,20 @@ export default function CustomersPage() {
                   <h1 className="text-2xl font-bold text-gray-900">顧客管理</h1>
                   <p className="text-gray-600">顧客データの一元管理と分析</p>
                 </div>
-              </div>
-              <div className="flex items-center space-x-4">
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">
-                    {userProfile?.name || user?.email}
-                  </p>
-                  <p className="text-xs text-gray-500">{userProfile?.role}</p>
+                <div className="flex items-center space-x-4">
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-900">
+                      {userProfile?.name || user?.email}
+                    </p>
+                    <p className="text-xs text-gray-500">{userProfile?.role}</p>
+                  </div>
+                  <Button variant="outline" onClick={handleSignOut}>
+                    ログアウト
+                  </Button>
                 </div>
-                <Button variant="outline" onClick={handleSignOut}>
-                  ログアウト
-                </Button>
               </div>
             </div>
           </div>
-        </div>
 
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -228,6 +227,7 @@ export default function CustomersPage() {
               </div>
             </div>
           </div>
+        </div>
         </div>
       </AppLayout>
     </ProtectedRoute>
