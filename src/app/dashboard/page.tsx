@@ -3,270 +3,291 @@
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { useAuthContext } from '@/lib/auth-context';
 import { AppLayout } from '@/components/layout/app-layout';
-import { PageLoading } from '@/components/ui/loading';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useDashboardWithTargets } from '@/hooks/useDashboardWithTargets';
-import { ProgressCard } from '@/components/ui/progress-card';
-import { AIPredictionsCard } from '@/components/features/ai/ai-predictions-card';
-import { MonthlyTrendChart } from '@/components/features/dashboard/monthly-trend-chart';
-import { QuickInputWidget } from '@/components/features/dashboard/quick-input-widget';
+import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { TrendingUp, TrendingDown, Target, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
+import { 
+  Calculator, 
+  Target, 
+  BarChart3, 
+  TrendingUp, 
+  Users, 
+  DollarSign,
+  Calendar,
+  ArrowRight,
+  Activity
+} from 'lucide-react';
+import { useMonthlyPlanning } from '@/hooks/useMonthlyPlanning';
 
 export default function DashboardPage() {
-  const { user, userProfile } = useAuthContext();
-  const [selectedMonth, setSelectedMonth] = useState(() => {
-    const now = new Date();
-    return format(now, 'yyyy-MM');
-  });
+  const { userProfile } = useAuthContext();
+  const { getPlanForMonth } = useMonthlyPlanning();
+  
+  const currentDate = new Date();
+  const currentMonth = format(currentDate, 'yyyy-MM');
+  const currentMonthLabel = format(currentDate, 'yyyy年MM月', { locale: ja });
+  
+  // 現在月の計画データを取得
+  const currentPlan = getPlanForMonth(currentMonth);
 
-  // 認証されている場合のみデータを取得
-  const { data: dashboardData, isLoading, error } = useDashboardWithTargets(selectedMonth, !!user && !!userProfile);
-
-  // 過去12ヶ月の選択肢を生成
-  const generateMonthOptions = () => {
-    const options = [];
-    const now = new Date();
-    for (let i = 0; i < 12; i++) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const value = format(date, 'yyyy-MM');
-      const label = format(date, 'yyyy年MM月', { locale: ja });
-      options.push({ value, label });
-    }
-    return options;
-  };
-
-  const monthOptions = generateMonthOptions();
-
-  // スプレッドシートベースの目標値との差異を表示
-  const progressMetrics = [
+  const quickActions = [
     {
-      title: 'MRR',
-      value: isLoading ? '¥-' : `¥${dashboardData?.mrr?.toLocaleString() || 0}`,
-      target: dashboardData?.mrrTarget, // スプレッドシート目標: ¥2,205,000
-      actual: dashboardData?.mrr || 0,
-      progress: dashboardData?.mrrProgress || 0,
-      difference: dashboardData?.mrrDifference || 0,
-      change: dashboardData?.mrrChange || '+0%',
-      icon: '💰',
-      color: 'from-green-500 to-emerald-500',
-      unit: 'currency' as const
+      title: '月次計画',
+      description: '成長パラメータとシミュレーション',
+      href: '/monthly-planning',
+      icon: <Calculator className="w-6 h-6" />,
+      color: 'from-blue-500 to-blue-600',
+      badge: 'New'
     },
     {
-      title: '有料会員数',
-      value: isLoading ? '-' : String(dashboardData?.activeCustomers || 0),
-      target: dashboardData?.activeCustomersTarget, // スプレッドシート目標: 450人
-      actual: dashboardData?.activeCustomers || 0,
-      progress: dashboardData?.activeCustomersProgress || 0,
-      difference: dashboardData?.activeCustomersDifference || 0,
-      change: dashboardData?.activeCustomersChange || '+0',
-      icon: '👥',
-      color: 'from-blue-500 to-cyan-500',
-      unit: 'count' as const
+      title: '予実管理',
+      description: '計画と実績の比較分析',
+      href: '/plan-vs-actual',
+      icon: <Target className="w-6 h-6" />,
+      color: 'from-green-500 to-green-600'
     },
     {
-      title: '新規獲得',
-      value: isLoading ? '-' : String(dashboardData?.newAcquisitions || 0),
-      target: dashboardData?.newAcquisitionsTarget, // スプレッドシート目標: 150人
-      actual: dashboardData?.newAcquisitions || 0,
-      progress: dashboardData?.newAcquisitionsProgress || 0,
-      difference: dashboardData?.newAcquisitionsDifference || 0,
-      icon: '📈',
-      color: 'from-purple-500 to-violet-500',
-      unit: 'count' as const
+      title: '月次レポート',
+      description: '詳細な月次分析レポート',
+      href: '/monthly-report',
+      icon: <BarChart3 className="w-6 h-6" />,
+      color: 'from-purple-500 to-purple-600'
     },
     {
-      title: 'チャーン率',
-      value: isLoading ? '-%' : `${dashboardData?.churnRate || 0}%`,
-      target: dashboardData?.churnRateTarget, // スプレッドシート目標: 3.5%
-      actual: dashboardData?.churnRate || 0,
-      progress: dashboardData?.churnRateProgress || 0,
-      difference: dashboardData?.churnRateDifference || 0,
-      icon: '📊',
-      color: 'from-orange-500 to-red-500',
-      unit: 'percentage' as const,
-      isInverted: true
+      title: 'コホート分析',
+      description: '顧客行動の時系列分析',
+      href: '/cohort-analysis',
+      icon: <Users className="w-6 h-6" />,
+      color: 'from-orange-500 to-orange-600'
     }
   ];
-
-  // 月次目標の達成状況を計算
-  const getTargetStatus = (actual: number, target: number, isInverted: boolean = false) => {
-    const percentage = target > 0 ? (actual / target) * 100 : 0;
-    if (isInverted) {
-      if (percentage <= 100) return { status: 'good', color: 'text-green-600', bgColor: 'bg-green-50' };
-      if (percentage <= 120) return { status: 'warning', color: 'text-orange-600', bgColor: 'bg-orange-50' };
-      return { status: 'danger', color: 'text-red-600', bgColor: 'bg-red-50' };
-    } else {
-      if (percentage >= 90) return { status: 'good', color: 'text-green-600', bgColor: 'bg-green-50' };
-      if (percentage >= 70) return { status: 'warning', color: 'text-orange-600', bgColor: 'bg-orange-50' };
-      return { status: 'danger', color: 'text-red-600', bgColor: 'bg-red-50' };
-    }
-  };
 
   return (
     <ProtectedRoute>
       <AppLayout>
         <div className="relative min-h-screen overflow-hidden">
-          {/* 背景グラデーション */}
           <div className="absolute inset-0 gradient-mesh opacity-10" />
         
-        {/* ページヘッダー */}
-        <header className="relative z-10 bg-white/80 border-b border-gray-100">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-6">
-              <div className="animate-fade-in">
-                <h1 className="text-2xl font-bold">
-                  <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                    ダッシュボード
-                  </span>
-                </h1>
-                <p className="text-muted-foreground mt-1">
-                  {format(new Date(selectedMonth + '-01'), 'yyyy年MM月', { locale: ja })}のビジネス状況
-                </p>
-              </div>
-              <div className="flex items-center space-x-4">
-                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                  <SelectTrigger className="w-48 glass hover:bg-white/20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {monthOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* メインコンテンツ */}
-        <main className="relative z-10 max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-          {/* データ読み込み中 */}
-          {isLoading && (
-            <PageLoading message={`${format(new Date(selectedMonth + '-01'), 'yyyy年MM月', { locale: ja })}のデータを取得しています`} />
-          )}
-
-          {!isLoading && (
-            <div className="space-y-8">
-              {/* 当月の実績サマリー */}
-              <div className="mb-8">
-                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <Target className="w-5 h-5" />
-                  {format(new Date(selectedMonth + '-01'), 'yyyy年MM月', { locale: ja })}の実績
-                </h2>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {progressMetrics.map((metric) => {
-                    const targetStatus = getTargetStatus(metric.actual, metric.target || 0, metric.isInverted);
-                    return (
-                      <Card key={metric.title} className="relative overflow-hidden">
-                        <div className={`absolute top-0 right-0 w-20 h-20 ${targetStatus.bgColor} rounded-bl-full opacity-20`} />
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-2xl">{metric.icon}</span>
-                            <span className={`text-sm font-medium ${targetStatus.color}`}>
-                              {metric.progress}%
-                            </span>
-                          </div>
-                          <CardTitle className="text-sm text-muted-foreground">{metric.title}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-2xl font-bold">{metric.value}</p>
-                          <div className="mt-2 space-y-1">
-                            <div className="flex justify-between text-xs">
-                              <span className="text-muted-foreground">目標</span>
-                              <span className="font-medium">
-                                {metric.unit === 'currency' ? `¥${metric.target?.toLocaleString()}` :
-                                 metric.unit === 'percentage' ? `${metric.target}%` : metric.target}
-                              </span>
-                            </div>
-                            <div className="flex justify-between text-xs">
-                              <span className="text-muted-foreground">差異</span>
-                              <span className={`font-medium ${metric.difference >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {metric.difference >= 0 ? '+' : ''}{metric.difference}
-                              </span>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+          {/* ヘッダー */}
+          <header className="relative z-10 glass border-b border-gray-100">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-between items-center py-6">
+                <div className="animate-fade-in">
+                  <div className="flex items-center gap-3">
+                    <Activity className="w-8 h-8 text-primary" />
+                    <div>
+                      <h1 className="text-3xl font-bold">
+                        <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                          ダッシュボード
+                        </span>
+                      </h1>
+                      <p className="text-muted-foreground mt-1">
+                        SNS管理システム - {currentMonthLabel}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">ようこそ</p>
+                  <p className="font-semibold">{userProfile?.name || 'ユーザー'}さん</p>
                 </div>
               </div>
+            </div>
+          </header>
 
-              {/* 支出状況 */}
-              {dashboardData?.monthlyExpensesTarget && (
-                <Card className="mb-8">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">月次支出状況</CardTitle>
-                      <span className={`text-sm font-medium ${
-                        dashboardData.expensesProgress <= 80 ? 'text-green-600' :
-                        dashboardData.expensesProgress <= 100 ? 'text-orange-600' : 'text-red-600'
-                      }`}>
-                        予算の{dashboardData.expensesProgress}%使用
-                      </span>
-                    </div>
+          {/* メインコンテンツ */}
+          <main className="relative z-10 max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            {/* 当月サマリー */}
+            {currentPlan && (
+              <div className="mb-8">
+                <h2 className="text-xl font-semibold mb-4">{currentMonthLabel} 計画概要</h2>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <Card className="glass">
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-3">
+                        <TrendingUp className="w-8 h-8 text-green-500" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">新規獲得目標</p>
+                          <p className="text-2xl font-bold text-green-600">
+                            {currentPlan.newAcquisitions}人
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="glass">
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-3">
+                        <Users className="w-8 h-8 text-blue-500" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">総顧客数予測</p>
+                          <p className="text-2xl font-bold text-blue-600">
+                            {currentPlan.totalCustomers}人
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="glass">
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-3">
+                        <DollarSign className="w-8 h-8 text-purple-500" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">MRR目標</p>
+                          <p className="text-2xl font-bold text-purple-600">
+                            ¥{currentPlan.mrr.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="glass">
+                    <CardContent className="p-6">
+                      <div className="flex items-center gap-3">
+                        <Target className="w-8 h-8 text-orange-500" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">予想利益</p>
+                          <p className={`text-2xl font-bold ${currentPlan.profit >= 0 ? 'text-orange-600' : 'text-red-600'}`}>
+                            ¥{currentPlan.profit.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            )}
+
+            {/* クイックアクション */}
+            <div className="mb-8">
+              <h2 className="text-xl font-semibold mb-4">主要機能</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {quickActions.map((action, index) => (
+                  <Link key={index} href={action.href}>
+                    <Card className="glass hover:scale-105 transition-all duration-200 cursor-pointer h-full">
+                      <CardContent className="p-6">
+                        <div className="flex flex-col items-center text-center space-y-4">
+                          <div className={`p-4 rounded-full bg-gradient-to-r ${action.color} text-white shadow-lg`}>
+                            {action.icon}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 justify-center">
+                              <h3 className="font-semibold text-lg">{action.title}</h3>
+                              {action.badge && (
+                                <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
+                                  {action.badge}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-2">
+                              {action.description}
+                            </p>
+                          </div>
+                          <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* 最近のアクティビティ */}
+            <div>
+              <h2 className="text-xl font-semibold mb-4">システム状況</h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card className="glass">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Calendar className="w-5 h-5" />
+                      今月の状況
+                    </CardTitle>
+                    <CardDescription>
+                      {currentMonthLabel}の進捗状況
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-2xl font-bold">¥{dashboardData.totalExpenses.toLocaleString()}</span>
-                      <span className="text-sm text-muted-foreground">/ ¥{dashboardData.monthlyExpensesTarget.toLocaleString()}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full transition-all duration-300 ${
-                          dashboardData.expensesProgress <= 80 ? 'bg-green-500' :
-                          dashboardData.expensesProgress <= 100 ? 'bg-orange-500' : 'bg-red-500'
-                        }`}
-                        style={{ width: `${Math.min(100, dashboardData.expensesProgress)}%` }}
-                      />
+                    {currentPlan ? (
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">計画策定</span>
+                          <span className="text-green-600 font-medium">完了</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">目標設定</span>
+                          <span className="text-green-600 font-medium">設定済み</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">実績入力</span>
+                          <span className="text-orange-600 font-medium">進行中</span>
+                        </div>
+                        <div className="mt-4 pt-4 border-t">
+                          <Link href="/plan-vs-actual">
+                            <Button className="w-full">
+                              実績を入力する
+                              <ArrowRight className="w-4 h-4 ml-2" />
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-6">
+                        <p className="text-muted-foreground mb-4">月次計画が未設定です</p>
+                        <Link href="/monthly-planning">
+                          <Button>
+                            計画を作成する
+                            <ArrowRight className="w-4 h-4 ml-2" />
+                          </Button>
+                        </Link>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="glass">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Activity className="w-5 h-5" />
+                      システム機能
+                    </CardTitle>
+                    <CardDescription>
+                      利用可能な分析・管理機能
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">月次計画シミュレーション</span>
+                        <span className="text-green-600 text-sm font-medium">稼働中</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">予実管理システム</span>
+                        <span className="text-green-600 text-sm font-medium">稼働中</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">コホート分析</span>
+                        <span className="text-green-600 text-sm font-medium">稼働中</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">月次レポート生成</span>
+                        <span className="text-green-600 text-sm font-medium">稼働中</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">日報管理</span>
+                        <span className="text-green-600 text-sm font-medium">稼働中</span>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
-              )}
-
-              {/* 月次推移グラフ */}
-              <div className="mb-8">
-                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5" />
-                  月次推移と計画
-                </h2>
-                <Card>
-                  <CardContent className="p-6">
-                    <MonthlyTrendChart currentMonth={selectedMonth} />
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* クイック入力 */}
-                <div>
-                  <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                    <AlertCircle className="w-5 h-5" />
-                    クイック入力
-                  </h2>
-                  <QuickInputWidget currentMonth={selectedMonth} />
-                </div>
-
-                {/* AI予測 */}
-                <div>
-                  <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5" />
-                    AI予測・インサイト
-                  </h2>
-                  <AIPredictionsCard currentMonth={selectedMonth} />
-                </div>
               </div>
             </div>
-          )}
-        </main>
+          </main>
         </div>
       </AppLayout>
     </ProtectedRoute>
