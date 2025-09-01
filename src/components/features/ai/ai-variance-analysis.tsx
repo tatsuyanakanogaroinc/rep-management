@@ -135,14 +135,14 @@ export function AIVarianceAnalysis({ comparisonData, historicalData }: AIVarianc
             {prioritizedAnalyses.slice(0, 5).map((analysis, index) => (
               <div 
                 key={index}
-                className={`border rounded-lg p-4 ${getSeverityColor(analysis.severity)}`}
+                className={`border rounded-lg p-4 ${getSeverityColor(analysis.severity)} hover:shadow-md transition-shadow`}
               >
-                <div className="flex items-start justify-between mb-3">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-3">
                   <div className="flex items-center gap-2">
                     {getSeverityIcon(analysis.severity)}
                     <h4 className="font-medium">{analysis.issue}</h4>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     {getTimeframeBadge(analysis.timeframe)}
                     <Badge variant="outline" className="text-xs">
                       信頼度 {analysis.confidence}%

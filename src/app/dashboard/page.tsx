@@ -2,6 +2,8 @@
 
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { useAuthContext } from '@/lib/auth-context';
+import { AppLayout } from '@/components/layout/app-layout';
+import { PageLoading } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -153,12 +155,13 @@ export default function DashboardPage() {
 
   return (
     <ProtectedRoute>
-      <div className="relative min-h-screen overflow-hidden">
-        {/* 背景グラデーション */}
-        <div className="absolute inset-0 gradient-mesh opacity-10" />
+      <AppLayout>
+        <div className="relative min-h-screen overflow-hidden">
+          {/* 背景グラデーション */}
+          <div className="absolute inset-0 gradient-mesh opacity-10" />
         
-        {/* ヘッダー */}
-        <header className="relative z-10 glass border-b border-gray-100">
+        {/* ページヘッダー */}
+        <header className="relative z-10 bg-white/80 border-b border-gray-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-6">
               <div className="animate-fade-in">
@@ -184,21 +187,6 @@ export default function DashboardPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <div className="glass rounded-xl px-4 py-2 text-right">
-                  <p className="text-sm font-medium text-foreground">
-                    {userProfile?.name || user?.email}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {userProfile?.role}
-                  </p>
-                </div>
-                <Button 
-                  variant="outline" 
-                  onClick={handleSignOut}
-                  className="glass hover:bg-white/20 transition-all duration-200"
-                >
-                  ログアウト
-                </Button>
               </div>
             </div>
           </div>
@@ -208,15 +196,7 @@ export default function DashboardPage() {
         <main className="relative z-10 max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
           {/* データ読み込み中またはエラー時の表示 */}
           {isLoading && (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-center">
-                <div className="relative mb-4">
-                  <div className="w-8 h-8 rounded-full border-2 border-gray-200"></div>
-                  <div className="absolute top-0 left-0 w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
-                </div>
-                <p className="text-sm text-muted-foreground">データを読み込んでいます...</p>
-              </div>
-            </div>
+            <PageLoading message={`${format(new Date(selectedMonth + '-01'), 'yyyy年MM月', { locale: ja })}のデータを取得しています`} />
           )}
 
           {error && (
@@ -370,7 +350,8 @@ export default function DashboardPage() {
             </>
           )}
         </main>
-      </div>
+        </div>
+      </AppLayout>
     </ProtectedRoute>
   );
 }

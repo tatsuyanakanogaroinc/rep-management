@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ProtectedRoute } from '@/components/auth/protected-route';
+import { AppLayout } from '@/components/layout/app-layout';
 import { CustomerForm } from '@/components/features/customers/customer-form';
 import { CustomersList } from '@/components/features/customers/customers-list';
 import { Button } from '@/components/ui/button';
@@ -40,15 +41,12 @@ export default function CustomersPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <div className="bg-white shadow">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-6">
-              <div className="flex items-center space-x-4">
-                <Link href="/dashboard">
-                  <Button variant="outline">← ダッシュボード</Button>
-                </Link>
+      <AppLayout>
+        <div className="min-h-screen bg-gray-50">
+          {/* Header */}
+          <div className="bg-white shadow">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-between items-center py-6">
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">顧客管理</h1>
                   <p className="text-gray-600">顧客データの一元管理と分析</p>
@@ -231,7 +229,8 @@ export default function CustomersPage() {
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      </AppLayout>
     </ProtectedRoute>
   );
 }

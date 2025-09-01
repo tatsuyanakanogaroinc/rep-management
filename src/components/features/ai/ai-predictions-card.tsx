@@ -10,6 +10,7 @@ import { TrendingUp, TrendingDown, Minus, Brain, AlertTriangle, Info, AlertCircl
 import { useState } from 'react';
 import { format, addMonths } from 'date-fns';
 import { ja } from 'date-fns/locale';
+import { AILoading } from '@/components/ui/loading';
 
 interface AIPredictionsCardProps {
   currentMonth: string;
@@ -22,11 +23,8 @@ export function AIPredictionsCard({ currentMonth }: AIPredictionsCardProps) {
   if (isLoading) {
     return (
       <Card className="glass">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-            <span className="ml-2">AI分析中...</span>
-          </div>
+        <CardContent>
+          <AILoading />
         </CardContent>
       </Card>
     );
@@ -167,7 +165,7 @@ export function AIPredictionsCard({ currentMonth }: AIPredictionsCardProps) {
             {predictions.slice(0, showDetails ? predictions.length : 4).map((prediction) => (
               <div
                 key={prediction.metric}
-                className="flex items-center justify-between p-3 bg-white/50 rounded-lg border"
+                className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/50 rounded-lg border gap-3"
               >
                 <div className="flex items-center gap-3">
                   {getTrendIcon(prediction.trend)}
@@ -180,19 +178,19 @@ export function AIPredictionsCard({ currentMonth }: AIPredictionsCardProps) {
                     </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="font-semibold">
+                <div className="text-right sm:text-right text-left">
+                  <div className="font-semibold text-lg">
                     {formatValue(prediction.metric, prediction.predictedValue)}
                   </div>
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className={`${prediction.changePercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {prediction.changePercent >= 0 ? '+' : ''}{prediction.changePercent}%
+                  <div className="flex items-center gap-2 text-xs mt-1 justify-end sm:justify-end justify-start">
+                    <span className={`font-medium ${prediction.changePercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {prediction.changePercent >= 0 ? '+' : ''}{prediction.changePercent.toFixed(1)}%
                     </span>
                     <Badge
                       variant="secondary"
                       className={`text-xs ${getConfidenceColor(prediction.confidence)}`}
                     >
-                      {Math.round(prediction.confidence * 100)}%
+                      信頼度{Math.round(prediction.confidence * 100)}%
                     </Badge>
                   </div>
                 </div>
@@ -202,12 +200,18 @@ export function AIPredictionsCard({ currentMonth }: AIPredictionsCardProps) {
         </div>
 
         {/* 信頼度についての説明 */}
-        <div className="text-xs text-muted-foreground bg-gray-50 p-3 rounded-lg">
-          <p className="font-medium mb-1">💡 AI予測について</p>
-          <p>
-            過去6ヶ月のデータを基に、線形回帰・移動平均・季節性を考慮した予測を行っています。
-            信頼度は予測の確実性を表し、データが多いほど高くなります。
-          </p>
+        <div className="text-xs text-muted-foreground bg-gradient-to-r from-gray-50 to-blue-50 p-4 rounded-lg border">
+          <div className="flex items-start gap-2">
+            <Brain className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-medium mb-2 text-gray-800">AI予測について</p>
+              <ul className="space-y-1">
+                <li>• 過去6ヶ月のデータを基に線形回帰・移動平均・季節性を考慮</li>
+                <li>• 信頼度は予測の確実性を表し、データが多いほど高精度</li>
+                <li>• 外部要因（市場変化など）は含まれていません</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

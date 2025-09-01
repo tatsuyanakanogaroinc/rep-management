@@ -9,6 +9,7 @@ import { format, subMonths, addMonths } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { useMonthlyTrends } from '@/hooks/useMonthlyTrends';
 import { TrendingUp, Target, BarChart3, DollarSign, Users, UserMinus, CreditCard, PieChart, Activity } from 'lucide-react';
+import { ChartLoading } from '@/components/ui/loading';
 
 interface MonthlyTrendChartProps {
   currentMonth: string;
@@ -18,6 +19,9 @@ type ChartType = 'revenue' | 'customers' | 'acquisition' | 'churn' | 'expenses' 
 
 export function MonthlyTrendChart({ currentMonth }: MonthlyTrendChartProps) {
   const [chartType, setChartType] = useState<ChartType>('revenue');
+  const [selectedDataPoint, setSelectedDataPoint] = useState<any>(null);
+  const [zoomDomain, setZoomDomain] = useState<[number, number] | null>(null);
+  const [isAnimated, setIsAnimated] = useState(true);
   const { data, isLoading } = useMonthlyTrends(currentMonth);
 
   console.log('MonthlyTrendChart render:', { 
@@ -30,36 +34,72 @@ export function MonthlyTrendChart({ currentMonth }: MonthlyTrendChartProps) {
   if (isLoading || !data) {
     return (
       <Card className="glass">
-        <CardContent className="p-12 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+        <CardContent>
+          <ChartLoading />
         </CardContent>
       </Card>
     );
   }
 
-  // カスタムツールチップ
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  // インタラクティブツールチップ
+  const InteractiveTooltip = ({ active, payload, label, coordinate }: any) => {
     if (!active || !payload || !payload.length) return null;
 
+    const data = payload[0].payload;
+    const hasTargets = data.mrrTarget || data.activeCustomersTarget;
+
     return (
-      <div className="glass p-4 rounded-lg shadow-lg border border-gray-200">
-        <p className="font-semibold text-sm mb-2">{label}</p>
-        {payload.map((entry: any, index: number) => (
-          <div key={index} className="flex items-center justify-between gap-4 text-sm">
-            <span style={{ color: entry.color }}>{entry.name}:</span>
-            <span className="font-medium">
-              {entry.name.includes('率') 
-                ? `${entry.value}%`
-                : entry.name.includes('円') || entry.name === 'MRR' || entry.name === '売上'
-                ? `¥${entry.value.toLocaleString()}`
-                : `${entry.value}${entry.name.includes('人') ? '人' : ''}`
-              }
-            </span>
+      <div className="glass p-4 rounded-lg shadow-xl border border-gray-200 min-w-64 max-w-80">
+        <div className="flex items-center gap-2 mb-3">
+          <Activity className="w-4 h-4 text-primary" />
+          <p className="font-semibold text-sm">{label}</p>
+        </div>
+        
+        <div className="space-y-2">
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex items-center justify-between gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <div 
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: entry.color }}
+                />
+                <span className="font-medium">{entry.name}</span>
+              </div>
+              <span className="font-semibold text-right">
+                {entry.name.includes('率') 
+                  ? `${entry.value}%`
+                  : entry.name.includes('円') || entry.name === 'MRR' || entry.name === '売上'
+                  ? `¥${entry.value.toLocaleString()}`
+                  : `${entry.value.toLocaleString()}`
+                }
+              </span>
+            </div>
+          ))}
+        </div>
+        
+        {/* 目標との比較情報 */}
+        {hasTargets && (
+          <div className="mt-3 pt-3 border-t border-gray-200">
+            <div className="text-xs text-muted-foreground">
+              <p className="font-medium mb-1">📊 目標達成状況</p>
+              {data.mrrTarget && (
+                <p>MRR: {Math.round((data.mrr / data.mrrTarget) * 100)}%達成</p>
+              )}
+              {data.activeCustomersTarget && (
+                <p>顧客数: {Math.round((data.activeCustomers / data.activeCustomersTarget) * 100)}%達成</p>
+              )}
+            </div>
           </div>
-        ))}
+        )}
+        
+        {/* インタラクティブアクション */}
+        <div className="mt-3 pt-3 border-t border-gray-200">
+          <p className="text-xs text-muted-foreground">
+            💡 クリックで詳細表示・ドラッグでズーム
+          </p>
+        </div>
       </div>
     );
-  };
 
   // チャート設定
   const chartConfigs = {
@@ -170,12 +210,34 @@ export function MonthlyTrendChart({ currentMonth }: MonthlyTrendChartProps) {
   const currentDate = new Date();
   const selectedDate = new Date(currentMonth + '-01');
 
+  // インタラクティブ機能のハンドラー
+  const handleDataPointClick = (data: any, index: number) => {
+    setSelectedDataPoint({ ...data, index });
+    console.log('Data point clicked:', data);
+  };
+
+  const handleZoomChange = (domain: any) => {
+    if (domain && domain.left !== undefined && domain.right !== undefined) {
+      setZoomDomain([domain.left, domain.right]);
+    }
+  };
+
+  const resetZoom = () => {
+    setZoomDomain(null);
+  };
+
+  const toggleAnimation = () => {
+    setIsAnimated(!isAnimated);
+  };
+
   console.log('Chart config:', {
     chartType,
     configTitle: config.title,
     dataLength: config.data?.length,
     lines: config.lines,
-    sampleData: config.data?.slice(0, 2)
+    sampleData: config.data?.slice(0, 2),
+    selectedDataPoint,
+    zoomDomain
   });
 
   return (
@@ -190,9 +252,30 @@ export function MonthlyTrendChart({ currentMonth }: MonthlyTrendChartProps) {
             </div>
           </div>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 relative">
-            <Badge variant="outline" className="text-xs whitespace-nowrap">
-              過去6ヶ月 + 未来6ヶ月
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs whitespace-nowrap">
+                過去6ヶ月 + 未来6ヶ月
+              </Badge>
+              {zoomDomain && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={resetZoom}
+                  className="text-xs h-6 px-2"
+                >
+                  ズームリセット
+                </Button>
+              )}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={toggleAnimation}
+                className="text-xs h-6 px-2"
+                title={isAnimated ? 'アニメーション無効' : 'アニメーション有効'}
+              >
+                {isAnimated ? '🎬' : '⏸️'}
+              </Button>
+            </div>
             <div className="relative w-full sm:w-48">
               <Select 
                 value={chartType} 
@@ -307,7 +390,7 @@ export function MonthlyTrendChart({ currentMonth }: MonthlyTrendChartProps) {
                   tick={{ fontSize: 12 }}
                   tickFormatter={(value) => `${value}人`}
                 />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<InteractiveTooltip />} />
                 <Legend />
                 <Area
                   yAxisId="left"
@@ -350,7 +433,7 @@ export function MonthlyTrendChart({ currentMonth }: MonthlyTrendChartProps) {
                   tick={{ fontSize: 12 }}
                   tickFormatter={config.yAxisFormatter}
                 />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<InteractiveTooltip />} />
                 <Legend />
                 {config.lines.map((line) => {
                   console.log(`Rendering line: ${line.key} for chart: ${chartType}`, {
@@ -365,9 +448,22 @@ export function MonthlyTrendChart({ currentMonth }: MonthlyTrendChartProps) {
                       dataKey={line.key}
                       stroke={line.color}
                       strokeWidth={2}
+                      dot={{ 
+                        fill: line.color, 
+                        strokeWidth: 2, 
+                        r: 4,
+                        cursor: 'pointer'
+                      }}
+                      activeDot={{ 
+                        r: 6, 
+                        stroke: line.color,
+                        strokeWidth: 2,
+                        fill: '#fff',
+                        cursor: 'pointer',
+                        onClick: handleDataPointClick
+                      }}
+                      animationDuration={isAnimated ? 1000 : 0}
                       strokeDasharray={line.strokeDasharray}
-                      dot={{ fill: line.color, r: 4 }}
-                      activeDot={{ r: 6 }}
                       name={line.name}
                     />
                   );
@@ -376,6 +472,40 @@ export function MonthlyTrendChart({ currentMonth }: MonthlyTrendChartProps) {
             )}
           </ResponsiveContainer>
         </div>
+
+        {/* 選択されたデータポイントの詳細 */}
+        {selectedDataPoint && (
+          <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-medium flex items-center gap-2">
+                <Activity className="w-4 h-4" />
+                選択された月: {format(new Date(selectedDataPoint.month + '-01'), 'yyyy年MM月', { locale: ja })}
+              </h4>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setSelectedDataPoint(null)}
+                className="h-6 w-6 p-0"
+              >
+                ×
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+              {config.lines.map(line => {
+                const value = selectedDataPoint[line.key];
+                if (value === undefined) return null;
+                return (
+                  <div key={line.key} className="text-center p-2 bg-white rounded">
+                    <p className="text-muted-foreground text-xs">{line.name}</p>
+                    <p className="font-semibold" style={{ color: line.color }}>
+                      {config.yAxisFormatter(value)}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* 凡例と説明 */}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">

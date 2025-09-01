@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ProtectedRoute } from '@/components/auth/protected-route';
+import { AppLayout } from '@/components/layout/app-layout';
 import { ExpenseForm } from '@/components/features/expenses/expense-form';
 import { ExpensesList } from '@/components/features/expenses/expenses-list';
 import { Button } from '@/components/ui/button';
@@ -49,15 +50,12 @@ export default function ExpensesPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <div className="bg-white shadow">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-6">
-              <div className="flex items-center space-x-4">
-                <Link href="/dashboard">
-                  <Button variant="outline">← ダッシュボード</Button>
-                </Link>
+      <AppLayout>
+        <div className="min-h-screen bg-gray-50">
+          {/* Header */}
+          <div className="bg-white shadow">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex justify-between items-center py-6">
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">支出管理</h1>
                   <p className="text-gray-600">支出の登録・承認・管理</p>
@@ -260,7 +258,8 @@ export default function ExpensesPage() {
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      </AppLayout>
     </ProtectedRoute>
   );
 }

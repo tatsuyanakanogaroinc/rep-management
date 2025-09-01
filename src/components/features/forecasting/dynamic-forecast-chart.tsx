@@ -69,7 +69,9 @@ export function DynamicForecastChart({ historicalData, currentMonth }: DynamicFo
           mrr: d.mrr,
           customers: d.activeCustomers,
           expenses: d.totalExpenses,
-          type: 'historical' as const
+          type: 'historical' as const,
+          optimisticValue: null,
+          pessimisticValue: null
         })),
         // 予測データ
         ...forecasts.map(f => ({
@@ -80,7 +82,9 @@ export function DynamicForecastChart({ historicalData, currentMonth }: DynamicFo
           expenses: f.predictedExpenses,
           type: 'forecast' as const,
           confidence: f.confidence,
-          scenarios: f.scenarios
+          scenarios: f.scenarios,
+          optimisticValue: f.scenarios?.optimistic?.[currentConfig.key] || null,
+          pessimisticValue: f.scenarios?.pessimistic?.[currentConfig.key] || null
         }))
       ];
       
@@ -179,13 +183,21 @@ export function DynamicForecastChart({ historicalData, currentMonth }: DynamicFo
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8">
-            <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-3" />
-            <p className="text-lg font-medium mb-2">データ不足</p>
-            <p className="text-sm text-muted-foreground">
-              予測には最低3ヶ月の履歴データが必要です。<br />
-              現在のデータ: {historicalData.length}ヶ月
+          <div className="text-center py-12">
+            <div className="mx-auto w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
+              <AlertTriangle className="w-8 h-8 text-yellow-600" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">データ不足</h3>
+            <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+              AI予測には最低3ヶ月の履歴データが必要です。
+              <br />
+              <span className="font-medium">現在のデータ: {historicalData.length}ヶ月</span>
             </p>
+            <div className="mt-4">
+              <Badge variant="outline" className="bg-blue-50">
+                必要データ: 3ヶ月以上
+              </Badge>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -292,7 +304,7 @@ export function DynamicForecastChart({ historicalData, currentMonth }: DynamicFo
           
           <TabsContent value={selectedMetric} className="mt-6">
             {/* 予測チャート */}
-            <div className="h-80 mb-6">
+            <div className="h-80 mb-6 overflow-hidden">
               <ResponsiveContainer width="100%" height="100%">
                 {showScenarios ? (
                   <AreaChart data={chartData}>
@@ -317,7 +329,7 @@ export function DynamicForecastChart({ historicalData, currentMonth }: DynamicFo
                     
                     {/* 予測シナリオ */}
                     <Area
-                      dataKey={`scenarios.optimistic.${currentConfig.key === 'mrr' ? 'mrr' : 'customers'}`}
+                      dataKey="optimisticValue"
                       stroke="#22c55e"
                       fill="#22c55e"
                       fillOpacity={0.1}
@@ -325,7 +337,7 @@ export function DynamicForecastChart({ historicalData, currentMonth }: DynamicFo
                       connectNulls={false}
                     />
                     <Area
-                      dataKey={`scenarios.pessimistic.${currentConfig.key === 'mrr' ? 'mrr' : 'customers'}`}
+                      dataKey="pessimisticValue"
                       stroke="#ef4444"
                       fill="#ef4444"
                       fillOpacity={0.1}
@@ -333,7 +345,12 @@ export function DynamicForecastChart({ historicalData, currentMonth }: DynamicFo
                       connectNulls={false}
                     />
                     
-                    <ReferenceLine x={historicalData.length - 1} stroke="#666" strokeDasharray="2 2" />
+                    <ReferenceLine 
+                      x={format(new Date(currentMonth + '-01'), 'MM月', { locale: ja })} 
+                      stroke="#666" 
+                      strokeDasharray="2 2" 
+                      label="現在"
+                    />
                   </AreaChart>
                 ) : (
                   <LineChart data={chartData}>
@@ -370,21 +387,21 @@ export function DynamicForecastChart({ historicalData, currentMonth }: DynamicFo
 
             {/* 予測サマリー */}
             {forecasts.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
                   <h4 className="font-medium mb-2 flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
                     3ヶ月後予測
                   </h4>
                   <p className="text-2xl font-bold text-green-700">
-                    {currentConfig.formatter(
-                      selectedMetric === 'mrr' ? forecasts[2]?.predictedMrr || 0 :
-                      selectedMetric === 'customers' ? forecasts[2]?.predictedCustomers || 0 :
-                      forecasts[2]?.predictedExpenses || 0
-                    )}
+                    {forecasts[2] ? currentConfig.formatter(
+                      selectedMetric === 'mrr' ? forecasts[2].predictedMrr :
+                      selectedMetric === 'customers' ? forecasts[2].predictedCustomers :
+                      forecasts[2].predictedExpenses
+                    ) : 'N/A'}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    信頼度: {forecasts[2]?.confidence || 0}%
+                    信頼度: {forecasts[2] ? Math.round(forecasts[2].confidence * 100) : 0}%
                   </p>
                 </div>
                 
@@ -394,14 +411,14 @@ export function DynamicForecastChart({ historicalData, currentMonth }: DynamicFo
                     6ヶ月後予測
                   </h4>
                   <p className="text-2xl font-bold text-blue-700">
-                    {currentConfig.formatter(
-                      selectedMetric === 'mrr' ? forecasts[5]?.predictedMrr || 0 :
-                      selectedMetric === 'customers' ? forecasts[5]?.predictedCustomers || 0 :
-                      forecasts[5]?.predictedExpenses || 0
-                    )}
+                    {forecasts[5] ? currentConfig.formatter(
+                      selectedMetric === 'mrr' ? forecasts[5].predictedMrr :
+                      selectedMetric === 'customers' ? forecasts[5].predictedCustomers :
+                      forecasts[5].predictedExpenses
+                    ) : 'N/A'}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    信頼度: {forecasts[5]?.confidence || 0}%
+                    信頼度: {forecasts[5] ? Math.round(forecasts[5].confidence * 100) : 0}%
                   </p>
                 </div>
                 

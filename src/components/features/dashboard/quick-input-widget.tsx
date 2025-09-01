@@ -223,13 +223,13 @@ export function QuickInputWidget({ currentMonth }: QuickInputWidgetProps) {
                   <SelectItem value="monthly">
                     <div className="flex items-center gap-2">
                       <Badge variant="outline">月額</Badge>
-                      <span>¥2,490/月</span>
+                      <span>¥4,980/月</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="yearly">
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="bg-green-50">年額</Badge>
-                      <span>¥24,900/年</span>
+                      <span>¥49,800/年</span>
                     </div>
                   </SelectItem>
                 </SelectContent>

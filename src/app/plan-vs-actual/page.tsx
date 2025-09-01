@@ -2,6 +2,8 @@
 
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { useAuthContext } from '@/lib/auth-context';
+import { AppLayout } from '@/components/layout/app-layout';
+import { PageLoading } from '@/components/ui/loading';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -153,23 +155,21 @@ export default function PlanVsActualPage() {
   if (currentMonthData.isLoading) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-muted-foreground">データを読み込み中...</p>
-          </div>
-        </div>
+        <AppLayout>
+          <PageLoading message="計画vs実績データを読み込み中..." />
+        </AppLayout>
       </ProtectedRoute>
     );
   }
 
   return (
     <ProtectedRoute>
-      <div className="relative min-h-screen overflow-hidden">
-        <div className="absolute inset-0 gradient-mesh opacity-10" />
+      <AppLayout>
+        <div className="relative min-h-screen overflow-hidden">
+          <div className="absolute inset-0 gradient-mesh opacity-10" />
         
-        {/* ヘッダー */}
-        <header className="relative z-10 glass border-b border-gray-100">
+        {/* ページヘッダー */}
+        <header className="relative z-10 bg-white/80 border-b border-gray-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-6">
               <div className="animate-fade-in">
@@ -200,12 +200,6 @@ export default function PlanVsActualPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Link href="/dashboard">
-                  <Button variant="outline" className="glass hover:bg-white/20">
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    ダッシュボードに戻る
-                  </Button>
-                </Link>
               </div>
             </div>
           </div>
@@ -398,7 +392,7 @@ export default function PlanVsActualPage() {
           </div>
 
           {/* AI分析セクション */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8 mt-8">
             {/* AI乖離分析 */}
             <div>
               <AIVarianceAnalysis 
@@ -467,7 +461,8 @@ export default function PlanVsActualPage() {
             </CardContent>
           </Card>
         </main>
-      </div>
+        </div>
+      </AppLayout>
     </ProtectedRoute>
   );
 }
