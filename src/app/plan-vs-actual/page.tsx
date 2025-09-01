@@ -63,11 +63,11 @@ interface VarianceData {
 export default function PlanVsActualPage() {
   const { userProfile } = useAuthContext();
   const { getPlanForMonth } = useMonthlyPlanning();
-  const { monthlyTotals: actualFromDaily } = useDailyActuals(selectedMonth);
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return format(now, 'yyyy-MM');
   });
+  const { monthlyTotals: actualFromDaily } = useDailyActuals(selectedMonth);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isSaving, setIsSaving] = useState(false);
