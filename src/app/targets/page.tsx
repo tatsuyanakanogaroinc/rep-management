@@ -1,6 +1,7 @@
 'use client';
 
 import { ProtectedRoute } from '@/components/auth/protected-route';
+import { AppLayout } from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -126,7 +127,7 @@ export default function TargetsPage() {
       case 'score':
         return `${value}/5.0`;
       default:
-        return value.toString();
+        return (value || 0).toString();
     }
   };
 
@@ -138,7 +139,8 @@ export default function TargetsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="relative min-h-screen overflow-hidden">
+      <AppLayout>
+        <div className="relative min-h-screen overflow-hidden">
         {/* 背景グラデーション */}
         <div className="absolute inset-0 gradient-mesh opacity-10" />
         
@@ -346,7 +348,8 @@ export default function TargetsPage() {
             )}
           </div>
         </main>
-      </div>
+        </div>
+      </AppLayout>
     </ProtectedRoute>
   );
 }
