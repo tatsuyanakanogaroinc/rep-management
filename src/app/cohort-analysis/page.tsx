@@ -58,18 +58,44 @@ export default function CohortAnalysisPage() {
 
   const periodOptions = generatePeriodOptions();
 
-  // コホートデータ取得
+  // コホートデータ取得（顧客データから動的計算）
   const { data: cohortData, isLoading } = useQuery({
     queryKey: ['cohort-analysis', selectedPeriod],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('cohort_analysis')
-        .select('*')
-        .eq('cohort_period', selectedPeriod)
-        .single();
+      // 顧客データを取得してコホート分析を計算
+      const { data: customers, error } = await supabase
+        .from('customers')
+        .select('id, registered_at, churned_at, status, plan_type');
       
-      if (error && error.code !== 'PGRST116') throw error; // PGRST116は "no rows" エラー
-      return data as CohortData | null;
+      if (error) throw error;
+      if (!customers || customers.length === 0) return null;
+
+      // 指定期間の顧客をフィルタ
+      const periodStart = startOfMonth(new Date(selectedPeriod + '-01'));
+      const periodEnd = endOfMonth(periodStart);
+      
+      const cohortCustomers = customers.filter(customer => {
+        const registeredAt = new Date(customer.registered_at);
+        return registeredAt >= periodStart && registeredAt <= periodEnd;
+      });
+
+      if (cohortCustomers.length === 0) return null;
+
+      // 基本的なコホートデータを作成
+      const cohortData: CohortData = {
+        id: selectedPeriod,
+        cohort_period: selectedPeriod,
+        customer_count: cohortCustomers.length,
+        retention_month_1: cohortCustomers.filter(c => c.status === 'active').length / cohortCustomers.length * 100,
+        retention_month_2: null,
+        retention_month_3: null,
+        retention_month_6: null,
+        retention_month_12: null,
+        ltv: cohortCustomers.filter(c => c.plan_type === 'monthly').length * 5000 + 
+             cohortCustomers.filter(c => c.plan_type === 'yearly').length * 50000
+      };
+
+      return cohortData;
     }
   });
 
@@ -132,20 +158,8 @@ export default function CohortAnalysisPage() {
         created_by: user?.id
       };
       
-      // 既存データを削除してから挿入
-      await supabase
-        .from('cohort_analysis')
-        .delete()
-        .eq('cohort_period', period);
-      
-      const { data, error } = await supabase
-        .from('cohort_analysis')
-        .insert(cohortAnalysis)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
+      // メモリ内で計算したデータを返す
+      return cohortAnalysis;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cohort-analysis'] });

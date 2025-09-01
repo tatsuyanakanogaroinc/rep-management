@@ -91,7 +91,7 @@ export async function generatePredictions(
     const linearResult = linearRegression(data);
     const linearPrediction = linearResult.slope * data.length + linearResult.intercept;
     const movingAvgPrediction = movingAverage(data);
-    const seasonalPrediction = seasonalPrediction(data, nextMonth);
+    const seasonalPredictionValue = seasonalPrediction(data, nextMonth);
     
     // 重み付き平均で最終予測値を算出
     const weights = {
@@ -104,7 +104,7 @@ export async function generatePredictions(
     const predictedValue = Math.max(0,
       (linearPrediction * weights.linear + 
        movingAvgPrediction * weights.movingAvg + 
-       seasonalPrediction * weights.seasonal) / totalWeight
+       seasonalPredictionValue * weights.seasonal) / totalWeight
     );
 
     // 信頼度の計算

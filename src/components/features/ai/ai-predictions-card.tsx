@@ -98,7 +98,7 @@ export function AIPredictionsCard({ currentMonth }: AIPredictionsCardProps) {
       case 'churn_rate':
         return `${value}%`;
       default:
-        return value.toString();
+        return (value || 0).toString();
     }
   };
 

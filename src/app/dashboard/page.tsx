@@ -63,7 +63,7 @@ export default function DashboardPage() {
     },
     {
       title: '有料会員数',
-      value: isLoading ? '-' : (dashboardData?.activeCustomers || 0).toString(),
+      value: isLoading ? '-' : String(dashboardData?.activeCustomers || 0),
       target: dashboardData?.activeCustomersTarget, // スプレッドシート目標: 450人
       actual: dashboardData?.activeCustomers || 0,
       progress: dashboardData?.activeCustomersProgress || 0,
@@ -75,7 +75,7 @@ export default function DashboardPage() {
     },
     {
       title: '新規獲得',
-      value: isLoading ? '-' : (dashboardData?.newAcquisitions || 0).toString(),
+      value: isLoading ? '-' : String(dashboardData?.newAcquisitions || 0),
       target: dashboardData?.newAcquisitionsTarget, // スプレッドシート目標: 150人
       actual: dashboardData?.newAcquisitions || 0,
       progress: dashboardData?.newAcquisitionsProgress || 0,
