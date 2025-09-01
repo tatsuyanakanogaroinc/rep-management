@@ -258,7 +258,6 @@ export default function ExpensesPage() {
             </div>
           </div>
         </div>
-        </div>
       </AppLayout>
     </ProtectedRoute>
   );
