@@ -1,6 +1,7 @@
 'use client';
 
 import { ProtectedRoute } from '@/components/auth/protected-route';
+import { AppLayout } from '@/components/layout/app-layout';
 import { useAuthContext } from '@/lib/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -243,6 +244,7 @@ export default function RecurringExpensesPage() {
 
   return (
     <ProtectedRoute>
+      <AppLayout>
       <div className="relative min-h-screen overflow-hidden">
         <div className="absolute inset-0 gradient-mesh opacity-10" />
         
@@ -577,7 +579,8 @@ export default function RecurringExpensesPage() {
             </CardContent>
           </Card>
         </main>
-      </div>
+        </div>
+      </AppLayout>
     </ProtectedRoute>
   );
 }

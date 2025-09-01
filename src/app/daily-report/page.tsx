@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ProtectedRoute } from '@/components/auth/protected-route';
+import { AppLayout } from '@/components/layout/app-layout';
 import { DailyReportForm } from '@/components/features/daily-reports/daily-report-form';
 import { DailyReportsList } from '@/components/features/daily-reports/daily-reports-list';
 import { Button } from '@/components/ui/button';
@@ -25,7 +26,8 @@ export default function DailyReportPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
+      <AppLayout>
+        <div className="min-h-screen bg-gray-50">
         {/* Header */}
         <div className="bg-white shadow">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -168,7 +170,8 @@ export default function DailyReportPage() {
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      </AppLayout>
     </ProtectedRoute>
   );
 }

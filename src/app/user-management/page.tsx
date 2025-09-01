@@ -52,7 +52,8 @@ export default function UserManagementPage() {
 
   return (
     <ProtectedRoute>
-      <div className="relative min-h-screen overflow-hidden">
+      <AppLayout>
+        <div className="relative min-h-screen overflow-hidden">
         <div className="absolute inset-0 gradient-mesh opacity-10" />
         
         {/* ヘッダー */}
@@ -188,7 +189,8 @@ export default function UserManagementPage() {
             </div>
           </div>
         </main>
-      </div>
+        </div>
+      </AppLayout>
     </ProtectedRoute>
   );
 }

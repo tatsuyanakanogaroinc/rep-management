@@ -1,6 +1,7 @@
 'use client';
 
 import { ProtectedRoute } from '@/components/auth/protected-route';
+import { AppLayout } from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -217,7 +218,8 @@ export default function SettingsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="relative min-h-screen overflow-hidden">
+      <AppLayout>
+        <div className="relative min-h-screen overflow-hidden">
         {/* 背景グラデーション */}
         <div className="absolute inset-0 gradient-mesh opacity-10" />
         
@@ -492,7 +494,8 @@ export default function SettingsPage() {
             </TabsContent>
           </Tabs>
         </main>
-      </div>
+        </div>
+      </AppLayout>
     </ProtectedRoute>
   );
 }
