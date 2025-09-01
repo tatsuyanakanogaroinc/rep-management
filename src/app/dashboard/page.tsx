@@ -18,7 +18,8 @@ import {
   DollarSign,
   Calendar,
   ArrowRight,
-  Activity
+  Activity,
+  Brain
 } from 'lucide-react';
 import { useMonthlyPlanning } from '@/hooks/useMonthlyPlanning';
 
@@ -43,24 +44,26 @@ export default function DashboardPage() {
       badge: 'New'
     },
     {
+      title: 'AI分析',
+      description: '総合分析と改善提案',
+      href: '/ai-analysis',
+      icon: <Brain className="w-6 h-6" />,
+      color: 'from-purple-500 to-purple-600',
+      badge: 'New'
+    },
+    {
+      title: '日次分析',
+      description: '日次目標管理と実績追跡',
+      href: '/daily-analysis',
+      icon: <Calendar className="w-6 h-6" />,
+      color: 'from-green-500 to-green-600',
+      badge: 'New'
+    },
+    {
       title: '予実管理',
       description: '計画と実績の比較分析',
       href: '/plan-vs-actual',
       icon: <Target className="w-6 h-6" />,
-      color: 'from-green-500 to-green-600'
-    },
-    {
-      title: '月次レポート',
-      description: '詳細な月次分析レポート',
-      href: '/monthly-report',
-      icon: <BarChart3 className="w-6 h-6" />,
-      color: 'from-purple-500 to-purple-600'
-    },
-    {
-      title: 'コホート分析',
-      description: '顧客行動の時系列分析',
-      href: '/cohort-analysis',
-      icon: <Users className="w-6 h-6" />,
       color: 'from-orange-500 to-orange-600'
     }
   ];
@@ -279,7 +282,11 @@ export default function DashboardPage() {
                         <span className="text-green-600 text-sm font-medium">稼働中</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm">日報管理</span>
+                        <span className="text-sm">日次分析</span>
+                        <span className="text-green-600 text-sm font-medium">稼働中</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">AI分析システム</span>
                         <span className="text-green-600 text-sm font-medium">稼働中</span>
                       </div>
                     </div>

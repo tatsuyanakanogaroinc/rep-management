@@ -77,9 +77,9 @@ export function Sidebar() {
       icon: <BarChart3 className="w-5 h-5" />
     },
     {
-      href: '/daily-report',
-      label: '日報',
-      icon: <BarChart3 className="w-5 h-5" />
+      href: '/daily-analysis',
+      label: '日次分析',
+      icon: <Calendar className="w-5 h-5" />
     }
   ];
 
