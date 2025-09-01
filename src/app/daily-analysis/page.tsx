@@ -10,9 +10,11 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState } from 'react';
 import { format, getDaysInMonth, subDays, addDays } from 'date-fns';
 import { ja } from 'date-fns/locale';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { 
   Calendar, 
   Target, 
@@ -292,6 +294,67 @@ export default function DailyAnalysisPage() {
 
   const aiAnalysis = getDailyAIAnalysis();
 
+  // 日次進捗グラフ用データ生成
+  const generateDailyProgressData = () => {
+    if (!dailyTargets) return [];
+    
+    const year = parseInt(selectedMonth.split('-')[0]);
+    const month = parseInt(selectedMonth.split('-')[1]);
+    const daysInMonth = getDaysInMonth(new Date(year, month - 1));
+    const selectedDay = parseInt(selectedDate.split('-')[2]);
+    
+    const data = [];
+    let cumulativeTarget = 0;
+    let cumulativeActual = 0;
+    
+    for (let day = 1; day <= Math.min(selectedDay, daysInMonth); day++) {
+      const date = format(new Date(year, month - 1, day), 'yyyy-MM-dd');
+      const dayActual = dailyActuals[date];
+      
+      cumulativeTarget += dailyTargets.dailyNewAcquisitions;
+      cumulativeActual += dayActual?.newAcquisitions || 0;
+      
+      data.push({
+        day: `${day}日`,
+        date,
+        target: cumulativeTarget,
+        actual: cumulativeActual,
+        dailyTarget: dailyTargets.dailyNewAcquisitions,
+        dailyActual: dayActual?.newAcquisitions || 0
+      });
+    }
+    
+    return data;
+  };
+
+  // チャネル別パフォーマンスデータ
+  const generateChannelPerformanceData = () => {
+    if (!dailyTargets?.channels || !currentActual) return [];
+    
+    return dailyTargets.channels.map(channel => {
+      const actual = currentActual.channelData[channel.name];
+      const achievement = actual ? (actual.acquisitions / channel.dailyTarget) * 100 : 0;
+      const actualCpa = actual && actual.acquisitions > 0 ? actual.cost / actual.acquisitions : 0;
+      
+      return {
+        name: channel.name,
+        target: channel.dailyTarget,
+        actual: actual?.acquisitions || 0,
+        achievement: Math.round(achievement),
+        targetCpa: channel.targetCpa || 0,
+        actualCpa: Math.round(actualCpa),
+        budget: channel.dailyBudget,
+        spent: actual?.cost || 0
+      };
+    });
+  };
+
+  const progressData = generateDailyProgressData();
+  const channelData = generateChannelPerformanceData();
+
+  // チャート用カラー
+  const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#8dd1e1'];
+
   return (
     <ProtectedRoute>
       <AppLayout>
@@ -349,17 +412,36 @@ export default function DailyAnalysisPage() {
 
           {/* メインコンテンツ */}
           <main className="relative z-10 max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-            <div className="space-y-8">
-              
-              {!selectedPlan ? (
-                <Alert>
-                  <Info className="h-4 w-4" />
-                  <AlertDescription>
-                    選択した月の計画データがありません。月次計画を作成してください。
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <>
+            {!selectedPlan ? (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  選択した月の計画データがありません。月次計画を作成してください。
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Tabs defaultValue="overview" className="space-y-6">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="overview" className="flex items-center gap-2">
+                    <Target className="w-4 h-4" />
+                    概要
+                  </TabsTrigger>
+                  <TabsTrigger value="input" className="flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    実績入力
+                  </TabsTrigger>
+                  <TabsTrigger value="progress" className="flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4" />
+                    進捗分析
+                  </TabsTrigger>
+                  <TabsTrigger value="ai-action" className="flex items-center gap-2">
+                    <Brain className="w-4 h-4" />
+                    AI分析
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* 概要タブ */}
+                <TabsContent value="overview" className="space-y-6">
                   {/* 日次目標概要 */}
                   <Card className="glass">
                     <CardHeader>
@@ -373,32 +455,103 @@ export default function DailyAnalysisPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="text-center p-4 border rounded-lg">
-                          <Users className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-                          <div className="text-2xl font-bold text-blue-600 mb-1">
+                        <div className="text-center p-6 border rounded-lg bg-gradient-to-br from-blue-50 to-blue-100">
+                          <Users className="w-12 h-12 text-blue-500 mx-auto mb-3" />
+                          <div className="text-3xl font-bold text-blue-600 mb-2">
                             {dailyTargets?.dailyNewAcquisitions || 0}人
                           </div>
                           <div className="text-sm text-muted-foreground">新規獲得目標</div>
+                          <div className="text-xs text-blue-600 mt-1">
+                            月間: {selectedPlan.newAcquisitions}人
+                          </div>
                         </div>
-                        <div className="text-center p-4 border rounded-lg">
-                          <DollarSign className="w-8 h-8 text-green-500 mx-auto mb-2" />
-                          <div className="text-2xl font-bold text-green-600 mb-1">
+                        <div className="text-center p-6 border rounded-lg bg-gradient-to-br from-green-50 to-green-100">
+                          <DollarSign className="w-12 h-12 text-green-500 mx-auto mb-3" />
+                          <div className="text-3xl font-bold text-green-600 mb-2">
                             ¥{dailyTargets?.dailyRevenue.toLocaleString() || 0}
                           </div>
                           <div className="text-sm text-muted-foreground">日次売上目標</div>
+                          <div className="text-xs text-green-600 mt-1">
+                            月間: ¥{selectedPlan.mrr.toLocaleString()}
+                          </div>
                         </div>
-                        <div className="text-center p-4 border rounded-lg">
-                          <Activity className="w-8 h-8 text-purple-500 mx-auto mb-2" />
-                          <div className="text-2xl font-bold text-purple-600 mb-1">
+                        <div className="text-center p-6 border rounded-lg bg-gradient-to-br from-purple-50 to-purple-100">
+                          <Activity className="w-12 h-12 text-purple-500 mx-auto mb-3" />
+                          <div className="text-3xl font-bold text-purple-600 mb-2">
                             ¥{dailyTargets?.dailyExpenses.toLocaleString() || 0}
                           </div>
                           <div className="text-sm text-muted-foreground">日次支出予算</div>
+                          <div className="text-xs text-purple-600 mt-1">
+                            月間: ¥{selectedPlan.expenses.toLocaleString()}
+                          </div>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
 
-                  {/* 日次実績入力 */}
+                  {/* 今日の実績サマリー */}
+                  <Card className="glass">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Activity className="w-5 h-5" />
+                        今日の実績サマリー
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {currentActual ? (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <div className="text-center p-4 border rounded-lg">
+                            <div className="text-2xl font-bold mb-2">
+                              {currentActual.newAcquisitions}人
+                            </div>
+                            <div className="text-sm text-muted-foreground mb-2">新規獲得実績</div>
+                            <Badge className={
+                              currentActual.newAcquisitions >= (dailyTargets?.dailyNewAcquisitions || 0) ? 
+                              'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }>
+                              {currentActual.newAcquisitions >= (dailyTargets?.dailyNewAcquisitions || 0) ? '目標達成' : '目標未達'}
+                            </Badge>
+                          </div>
+                          <div className="text-center p-4 border rounded-lg">
+                            <div className="text-2xl font-bold mb-2">
+                              ¥{currentActual.revenue.toLocaleString()}
+                            </div>
+                            <div className="text-sm text-muted-foreground mb-2">売上実績</div>
+                            <Badge className={
+                              currentActual.revenue >= (dailyTargets?.dailyRevenue || 0) ? 
+                              'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }>
+                              {currentActual.revenue >= (dailyTargets?.dailyRevenue || 0) ? '目標達成' : '目標未達'}
+                            </Badge>
+                          </div>
+                          <div className="text-center p-4 border rounded-lg">
+                            <div className="text-2xl font-bold mb-2">
+                              ¥{currentActual.expenses.toLocaleString()}
+                            </div>
+                            <div className="text-sm text-muted-foreground mb-2">支出実績</div>
+                            <Badge className={
+                              currentActual.expenses <= (dailyTargets?.dailyExpenses || 0) ? 
+                              'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }>
+                              {currentActual.expenses <= (dailyTargets?.dailyExpenses || 0) ? '予算内' : '予算超過'}
+                            </Badge>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                          <h3 className="text-lg font-medium mb-2">実績未入力</h3>
+                          <p className="text-muted-foreground">
+                            今日の実績を入力してください
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                {/* 実績入力タブ */}
+                <TabsContent value="input" className="space-y-6">
                   <Card className="glass">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
@@ -506,121 +659,50 @@ export default function DailyAnalysisPage() {
                       </Button>
                     </CardContent>
                   </Card>
+                </TabsContent>
 
-                  {/* 日次実績と差異 */}
+                {/* 進捗分析タブ */}
+                <TabsContent value="progress" className="space-y-6">
+                  {/* 日次進捗グラフ */}
                   <Card className="glass">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <BarChart3 className="w-5 h-5" />
-                        日次実績と差異
+                        日次進捗推移
                       </CardTitle>
+                      <CardDescription>
+                        月初からの累計目標vs実績
+                      </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                        {/* 新規獲得 */}
-                        <div className="p-4 border rounded-lg">
-                          <div className="flex items-center justify-between mb-3">
-                            <h3 className="font-medium">新規獲得</h3>
-                            <Badge className={
-                              !currentActual ? 'bg-gray-100 text-gray-700' :
-                              currentActual.newAcquisitions >= dailyTargets!.dailyNewAcquisitions ? 'bg-green-100 text-green-700' :
-                              'bg-red-100 text-red-700'
-                            }>
-                              {!currentActual ? '未入力' :
-                               currentActual.newAcquisitions >= dailyTargets!.dailyNewAcquisitions ? '達成' : '未達'}
-                            </Badge>
-                          </div>
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span>実績</span>
-                              <span className="font-semibold">{currentActual?.newAcquisitions || 0}人</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span>目標</span>
-                              <span>{dailyTargets?.dailyNewAcquisitions || 0}人</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span>差異</span>
-                              <span className={`font-semibold ${
-                                (currentActual?.newAcquisitions || 0) >= (dailyTargets?.dailyNewAcquisitions || 0) ? 
-                                'text-green-600' : 'text-red-600'
-                              }`}>
-                                {((currentActual?.newAcquisitions || 0) - (dailyTargets?.dailyNewAcquisitions || 0)) >= 0 ? '+' : ''}
-                                {(currentActual?.newAcquisitions || 0) - (dailyTargets?.dailyNewAcquisitions || 0)}人
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* 日次売上 */}
-                        <div className="p-4 border rounded-lg">
-                          <div className="flex items-center justify-between mb-3">
-                            <h3 className="font-medium">日次売上</h3>
-                            <Badge className={
-                              !currentActual ? 'bg-gray-100 text-gray-700' :
-                              currentActual.revenue >= dailyTargets!.dailyRevenue ? 'bg-green-100 text-green-700' :
-                              'bg-red-100 text-red-700'
-                            }>
-                              {!currentActual ? '未入力' :
-                               currentActual.revenue >= dailyTargets!.dailyRevenue ? '達成' : '未達'}
-                            </Badge>
-                          </div>
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span>実績</span>
-                              <span className="font-semibold">¥{(currentActual?.revenue || 0).toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span>目標</span>
-                              <span>¥{(dailyTargets?.dailyRevenue || 0).toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span>差異</span>
-                              <span className={`font-semibold ${
-                                (currentActual?.revenue || 0) >= (dailyTargets?.dailyRevenue || 0) ? 
-                                'text-green-600' : 'text-red-600'
-                              }`}>
-                                {((currentActual?.revenue || 0) - (dailyTargets?.dailyRevenue || 0)) >= 0 ? '+' : ''}
-                                ¥{((currentActual?.revenue || 0) - (dailyTargets?.dailyRevenue || 0)).toLocaleString()}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* 日次支出 */}
-                        <div className="p-4 border rounded-lg">
-                          <div className="flex items-center justify-between mb-3">
-                            <h3 className="font-medium">日次支出</h3>
-                            <Badge className={
-                              !currentActual ? 'bg-gray-100 text-gray-700' :
-                              currentActual.expenses <= dailyTargets!.dailyExpenses ? 'bg-green-100 text-green-700' :
-                              'bg-red-100 text-red-700'
-                            }>
-                              {!currentActual ? '未入力' :
-                               currentActual.expenses <= dailyTargets!.dailyExpenses ? '予算内' : '予算超過'}
-                            </Badge>
-                          </div>
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span>実績</span>
-                              <span className="font-semibold">¥{(currentActual?.expenses || 0).toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span>予算</span>
-                              <span>¥{(dailyTargets?.dailyExpenses || 0).toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                              <span>差異</span>
-                              <span className={`font-semibold ${
-                                (currentActual?.expenses || 0) <= (dailyTargets?.dailyExpenses || 0) ? 
-                                'text-green-600' : 'text-red-600'
-                              }`}>
-                                {((currentActual?.expenses || 0) - (dailyTargets?.dailyExpenses || 0)) >= 0 ? '+' : ''}
-                                ¥{((currentActual?.expenses || 0) - (dailyTargets?.dailyExpenses || 0)).toLocaleString()}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
+                      <div className="h-80">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={progressData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="day" />
+                            <YAxis />
+                            <Tooltip 
+                              formatter={(value, name) => [
+                                `${value}人`, 
+                                name === 'target' ? '累計目標' : '累計実績'
+                              ]}
+                            />
+                            <Line 
+                              type="monotone" 
+                              dataKey="target" 
+                              stroke="#3b82f6" 
+                              strokeDasharray="5 5"
+                              name="累計目標"
+                            />
+                            <Line 
+                              type="monotone" 
+                              dataKey="actual" 
+                              stroke="#10b981" 
+                              strokeWidth={2}
+                              name="累計実績"
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
                       </div>
                     </CardContent>
                   </Card>
@@ -647,7 +729,7 @@ export default function DailyAnalysisPage() {
                                 {monthlyAccumulated.actual.acquisitions}人 / {selectedPlan.newAcquisitions}人
                               </span>
                             </div>
-                            <Progress value={monthlyAccumulated.achievement.acquisitions} className="h-3" />
+                            <Progress value={Math.min(monthlyAccumulated.achievement.acquisitions, 100)} className="h-4" />
                             <div className="text-sm text-muted-foreground mt-1">
                               達成率: {Math.round(monthlyAccumulated.achievement.acquisitions)}%
                             </div>
@@ -661,7 +743,7 @@ export default function DailyAnalysisPage() {
                                 ¥{monthlyAccumulated.actual.revenue.toLocaleString()} / ¥{selectedPlan.mrr.toLocaleString()}
                               </span>
                             </div>
-                            <Progress value={monthlyAccumulated.achievement.revenue} className="h-3" />
+                            <Progress value={Math.min(monthlyAccumulated.achievement.revenue, 100)} className="h-4" />
                             <div className="text-sm text-muted-foreground mt-1">
                               達成率: {Math.round(monthlyAccumulated.achievement.revenue)}%
                             </div>
@@ -675,7 +757,7 @@ export default function DailyAnalysisPage() {
                                 ¥{monthlyAccumulated.actual.expenses.toLocaleString()} / ¥{selectedPlan.expenses.toLocaleString()}
                               </span>
                             </div>
-                            <Progress value={monthlyAccumulated.achievement.expenses} className="h-3" />
+                            <Progress value={Math.min(monthlyAccumulated.achievement.expenses, 100)} className="h-4" />
                             <div className="text-sm text-muted-foreground mt-1">
                               使用率: {Math.round(monthlyAccumulated.achievement.expenses)}%
                             </div>
@@ -685,6 +767,58 @@ export default function DailyAnalysisPage() {
                     </Card>
                   )}
 
+                  {/* チャネル別パフォーマンス */}
+                  {channelData.length > 0 && (
+                    <Card className="glass">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Users className="w-5 h-5" />
+                          チャネル別パフォーマンス
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          {/* 獲得数比較チャート */}
+                          <div>
+                            <h3 className="font-medium mb-3">獲得数比較</h3>
+                            <div className="h-64">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={channelData}>
+                                  <CartesianGrid strokeDasharray="3 3" />
+                                  <XAxis dataKey="name" />
+                                  <YAxis />
+                                  <Tooltip />
+                                  <Bar dataKey="target" fill="#e5e7eb" name="目標" />
+                                  <Bar dataKey="actual" fill="#3b82f6" name="実績" />
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </div>
+
+                          {/* CPA比較チャート */}
+                          <div>
+                            <h3 className="font-medium mb-3">CPA比較</h3>
+                            <div className="h-64">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={channelData.filter(d => d.targetCpa > 0)}>
+                                  <CartesianGrid strokeDasharray="3 3" />
+                                  <XAxis dataKey="name" />
+                                  <YAxis />
+                                  <Tooltip formatter={(value) => [`¥${value.toLocaleString()}`, '']} />
+                                  <Bar dataKey="targetCpa" fill="#fbbf24" name="目標CPA" />
+                                  <Bar dataKey="actualCpa" fill="#f59e0b" name="実際CPA" />
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
+
+                {/* AI分析タブ */}
+                <TabsContent value="ai-action" className="space-y-6">
                   {/* AI分析とアクション */}
                   {aiAnalysis && (
                     <Card className="glass">
@@ -772,9 +906,9 @@ export default function DailyAnalysisPage() {
                       </CardContent>
                     </Card>
                   )}
-                </>
-              )}
-            </div>
+                </TabsContent>
+              </Tabs>
+            )}
           </main>
         </div>
       </AppLayout>
