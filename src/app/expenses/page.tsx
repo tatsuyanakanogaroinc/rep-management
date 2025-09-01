@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuthContext } from '@/lib/auth-context';
 import Link from 'next/link';
+import { Repeat } from 'lucide-react';
 
 interface Expense {
   id: string;
@@ -111,6 +112,13 @@ export default function ExpensesPage() {
                     >
                       {editingExpense ? '支出編集' : '支出登録'}
                     </button>
+                    <Link
+                      href="/expenses/recurring"
+                      className="py-2 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 flex items-center gap-2"
+                    >
+                      <Repeat className="w-4 h-4" />
+                      定期支出
+                    </Link>
                   </nav>
                 </div>
               </div>

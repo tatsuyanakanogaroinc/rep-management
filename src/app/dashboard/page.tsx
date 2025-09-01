@@ -10,6 +10,7 @@ import { ProgressCard } from '@/components/ui/progress-card';
 import { AIPredictionsCard } from '@/components/features/ai/ai-predictions-card';
 import { MonthlyTargetComparison } from '@/components/features/dashboard/monthly-target-comparison';
 import { MonthlyTrendChart } from '@/components/features/dashboard/monthly-trend-chart';
+import { QuickInputWidget } from '@/components/features/dashboard/quick-input-widget';
 import Link from 'next/link';
 import { useState } from 'react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
@@ -98,32 +99,39 @@ export default function DashboardPage() {
   // よく使う機能を厳選して表示（管理者には追加機能を表示）
   const quickActions = [
     {
+      title: '計画vs実績分析',
+      description: '目標達成状況の詳細分析',
+      icon: '📊',
+      href: '/plan-vs-actual',
+      color: 'from-blue-500 to-purple-500'
+    },
+    {
       title: '日報を入力',
       description: '今日の活動を記録',
       icon: '📝',
       href: '/daily-report',
-      color: 'from-blue-500 to-purple-500'
+      color: 'from-green-500 to-blue-500'
     },
     {
       title: '月次レポート',
       description: '詳細な月次分析を表示',
-      icon: '📊',
+      icon: '📈',
       href: '/monthly-report',
-      color: 'from-green-500 to-blue-500'
+      color: 'from-purple-500 to-pink-500'
     },
     {
       title: '計画シミュレーション',
       description: '事業計画と予算配分の最適化',
       icon: '🚀',
       href: '/planning',
-      color: 'from-purple-500 to-pink-500'
+      color: 'from-orange-500 to-red-500'
     },
     {
       title: '目標管理',
       description: '月次目標の設定と進捗確認',
       icon: '🎯',
       href: '/targets',
-      color: 'from-orange-500 to-red-500'
+      color: 'from-teal-500 to-green-500'
     },
     ...(userProfile?.role === 'admin' ? [
       {
@@ -297,9 +305,17 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* 月次推移グラフ */}
-          <div className="mb-8 animate-fade-in" style={{ animationDelay: '300ms' }}>
-            <MonthlyTrendChart currentMonth={selectedMonth} />
+          {/* クイック入力とチャート */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+            {/* クイック入力ウィジェット */}
+            <div className="lg:col-span-1 animate-fade-in" style={{ animationDelay: '300ms' }}>
+              <QuickInputWidget currentMonth={selectedMonth} />
+            </div>
+            
+            {/* 月次推移グラフ */}
+            <div className="lg:col-span-2 animate-fade-in" style={{ animationDelay: '350ms' }}>
+              <MonthlyTrendChart currentMonth={selectedMonth} />
+            </div>
           </div>
 
           {/* 月次目標との比較 */}
