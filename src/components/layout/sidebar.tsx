@@ -21,7 +21,8 @@ import {
   X,
   LogOut,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Calculator
 } from 'lucide-react';
 
 interface NavigationItem {
@@ -73,6 +74,12 @@ export function Sidebar() {
       href: '/targets',
       label: '目標管理',
       icon: <Target className="w-5 h-5" />
+    },
+    {
+      href: '/monthly-planning',
+      label: '月次計画',
+      icon: <Calculator className="w-5 h-5" />,
+      badge: 'New'
     },
     {
       href: '/monthly-report',
