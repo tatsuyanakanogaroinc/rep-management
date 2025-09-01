@@ -257,7 +257,7 @@ export default function MonthlyPlanningPage() {
                         onValueChange={(value) => handleParameterChange('planningHorizon', parseInt(value))}
                       >
                         <SelectTrigger>
-                          <SelectValue />
+                          <SelectValue placeholder="期間を選択" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="6">6ヶ月</SelectItem>

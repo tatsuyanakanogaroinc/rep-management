@@ -233,7 +233,7 @@ export default function CohortAnalysisPage() {
               <div className="flex items-center space-x-4">
                 <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
                   <SelectTrigger className="w-48 glass hover:bg-white/20">
-                    <SelectValue />
+                    <SelectValue placeholder="期間を選択" />
                   </SelectTrigger>
                   <SelectContent>
                     {periodOptions.map((option) => (

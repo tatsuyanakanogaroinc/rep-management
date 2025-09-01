@@ -417,7 +417,7 @@ export default function DailyAnalysisPage() {
                 <div className="flex items-center space-x-4">
                   <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                     <SelectTrigger className="w-48 glass hover:bg-white/20">
-                      <SelectValue />
+                      <SelectValue placeholder="月を選択" />
                     </SelectTrigger>
                     <SelectContent>
                       {monthOptions.map((option) => (
@@ -429,7 +429,7 @@ export default function DailyAnalysisPage() {
                   </Select>
                   <Select value={selectedDate} onValueChange={setSelectedDate}>
                     <SelectTrigger className="w-40 glass hover:bg-white/20">
-                      <SelectValue />
+                      <SelectValue placeholder="日付を選択" />
                     </SelectTrigger>
                     <SelectContent>
                       {dateOptions.map((option) => (
