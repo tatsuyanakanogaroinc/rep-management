@@ -609,9 +609,10 @@ export default function PlanVsActualPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <Label>新規獲得数</Label>
+                      <Label htmlFor="newAcquisitions">新規獲得数</Label>
                       <div className="flex items-center gap-2">
                         <Input
+                          id="newAcquisitions"
                           type="number"
                           value={actualData.newAcquisitions}
                           onChange={(e) => handleActualChange('newAcquisitions', parseInt(e.target.value) || 0)}
@@ -625,9 +626,10 @@ export default function PlanVsActualPage() {
                     </div>
                     
                     <div>
-                      <Label>総顧客数</Label>
+                      <Label htmlFor="totalCustomers">総顧客数</Label>
                       <div className="flex items-center gap-2">
                         <Input
+                          id="totalCustomers"
                           type="number"
                           value={actualData.totalCustomers}
                           onChange={(e) => handleActualChange('totalCustomers', parseInt(e.target.value) || 0)}
@@ -641,9 +643,10 @@ export default function PlanVsActualPage() {
                     </div>
                     
                     <div>
-                      <Label>チャーン数</Label>
+                      <Label htmlFor="churnCount">チャーン数</Label>
                       <div className="flex items-center gap-2">
                         <Input
+                          id="churnCount"
                           type="number"
                           value={actualData.churnCount}
                           onChange={(e) => handleActualChange('churnCount', parseInt(e.target.value) || 0)}
@@ -657,9 +660,10 @@ export default function PlanVsActualPage() {
                     </div>
                     
                     <div>
-                      <Label>MRR</Label>
+                      <Label htmlFor="mrr">MRR</Label>
                       <div className="flex items-center gap-2">
                         <Input
+                          id="mrr"
                           type="number"
                           value={actualData.mrr}
                           onChange={(e) => handleActualChange('mrr', parseInt(e.target.value) || 0)}
@@ -673,9 +677,10 @@ export default function PlanVsActualPage() {
                     </div>
                     
                     <div>
-                      <Label>総支出</Label>
+                      <Label htmlFor="expenses">総支出</Label>
                       <div className="flex items-center gap-2">
                         <Input
+                          id="expenses"
                           type="number"
                           value={actualData.expenses}
                           onChange={(e) => handleActualChange('expenses', parseInt(e.target.value) || 0)}
