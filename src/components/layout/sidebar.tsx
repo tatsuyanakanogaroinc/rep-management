@@ -49,12 +49,6 @@ export function Sidebar() {
       icon: <LayoutDashboard className="w-5 h-5" />
     },
     {
-      href: '/plan-vs-actual',
-      label: '計画vs実績',
-      icon: <Target className="w-5 h-5" />,
-      badge: 'AI'
-    },
-    {
       href: '/customers',
       label: '顧客管理',
       icon: <Users className="w-5 h-5" />
@@ -65,22 +59,30 @@ export function Sidebar() {
       icon: <CreditCard className="w-5 h-5" />
     },
     {
-      href: '/analytics',
-      label: '分析・予測',
+      href: '/cohort-analysis',
+      label: 'コホート分析',
+      icon: <BarChart3 className="w-5 h-5" />
+    },
+    {
+      href: '/plan-vs-actual',
+      label: 'AI分析・予測',
       icon: <Brain className="w-5 h-5" />,
-      children: [
-        {
-          href: '/analytics/trends',
-          label: 'トレンド分析',
-          icon: <TrendingUp className="w-4 h-4" />
-        },
-        {
-          href: '/analytics/forecasting',
-          label: 'AI予測',
-          icon: <Brain className="w-4 h-4" />,
-          badge: 'NEW'
-        }
-      ]
+      badge: 'AI'
+    },
+    {
+      href: '/targets',
+      label: '目標管理',
+      icon: <Target className="w-5 h-5" />
+    },
+    {
+      href: '/monthly-report',
+      label: '月次レポート',
+      icon: <BarChart3 className="w-5 h-5" />
+    },
+    {
+      href: '/daily-report',
+      label: '日報',
+      icon: <BarChart3 className="w-5 h-5" />
     }
   ];
 
