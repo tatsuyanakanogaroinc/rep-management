@@ -472,29 +472,155 @@ export default function PlanVsActualPage() {
               </Card>
 
               {/* 予実グラフ */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>顧客関連指標の予実対比</CardTitle>
+                    <CardDescription>
+                      新規獲得、総顧客数、チャーンの計画vs実績
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={[
+                          { metric: '新規獲得', planned: planData.newAcquisitions, actual: actualData.newAcquisitions },
+                          { metric: '総顧客数', planned: planData.totalCustomers, actual: actualData.totalCustomers },
+                          { metric: 'チャーン数', planned: planData.churnCount, actual: actualData.churnCount }
+                        ]}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="metric" fontSize={12} />
+                          <YAxis fontSize={12} />
+                          <Tooltip 
+                            formatter={(value: number, name: string) => [
+                              `${value}人`,
+                              name === 'planned' ? '計画' : '実績'
+                            ]}
+                          />
+                          <Legend />
+                          <Line 
+                            type="monotone" 
+                            dataKey="planned" 
+                            stroke="#3b82f6" 
+                            strokeWidth={3}
+                            strokeDasharray="5 5"
+                            name="計画"
+                            dot={{ fill: '#3b82f6', strokeWidth: 2, r: 6 }}
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="actual" 
+                            stroke="#10b981" 
+                            strokeWidth={3}
+                            name="実績"
+                            dot={{ fill: '#10b981', strokeWidth: 2, r: 6 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>収益関連指標の予実対比</CardTitle>
+                    <CardDescription>
+                      MRR、支出、利益の計画vs実績
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={[
+                          { metric: 'MRR', planned: planData.mrr, actual: actualData.mrr },
+                          { metric: '支出', planned: planData.expenses, actual: actualData.expenses },
+                          { metric: '利益', planned: planData.profit, actual: actualData.mrr - actualData.expenses }
+                        ]}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="metric" fontSize={12} />
+                          <YAxis 
+                            fontSize={12}
+                            tickFormatter={(value) => `¥${(value / 1000).toFixed(0)}k`}
+                          />
+                          <Tooltip 
+                            formatter={(value: number, name: string) => [
+                              `¥${value.toLocaleString()}`,
+                              name === 'planned' ? '計画' : '実績'
+                            ]}
+                          />
+                          <Legend />
+                          <Line 
+                            type="monotone" 
+                            dataKey="planned" 
+                            stroke="#8b5cf6" 
+                            strokeWidth={3}
+                            strokeDasharray="5 5"
+                            name="計画"
+                            dot={{ fill: '#8b5cf6', strokeWidth: 2, r: 6 }}
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="actual" 
+                            stroke="#f59e0b" 
+                            strokeWidth={3}
+                            name="実績"
+                            dot={{ fill: '#f59e0b', strokeWidth: 2, r: 6 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* 総合予実対比グラフ */}
               <Card>
                 <CardHeader>
-                  <CardTitle>予実対比グラフ</CardTitle>
+                  <CardTitle>全項目予実対比</CardTitle>
+                  <CardDescription>
+                    すべての指標の計画vs実績を一覧表示
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-80">
+                  <div className="h-96">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={varianceData}>
+                      <LineChart data={varianceData}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="metric" fontSize={12} />
-                        <YAxis fontSize={12} />
+                        <YAxis 
+                          fontSize={12}
+                          tickFormatter={(value) => {
+                            if (value >= 1000000) return `¥${(value / 1000000).toFixed(1)}M`;
+                            if (value >= 1000) return `¥${(value / 1000).toFixed(0)}k`;
+                            return value.toString();
+                          }}
+                        />
                         <Tooltip 
-                          formatter={(value: number, name: string) => [
-                            name === 'planned' || name === 'actual' ? 
-                              (typeof value === 'number' && value > 1000 ? `¥${value.toLocaleString()}` : value.toString()) :
-                              value.toString(),
-                            name === 'planned' ? '計画' : '実績'
-                          ]}
+                          formatter={(value: number, name: string, props: any) => {
+                            const unit = props.payload.unit;
+                            const formattedValue = unit === '円' ? `¥${value.toLocaleString()}` : `${value}${unit}`;
+                            return [formattedValue, name === 'planned' ? '計画' : '実績'];
+                          }}
                         />
                         <Legend />
-                        <Bar dataKey="planned" fill="#3b82f6" name="計画" />
-                        <Bar dataKey="actual" fill="#10b981" name="実績" />
-                      </BarChart>
+                        <Line 
+                          type="monotone" 
+                          dataKey="planned" 
+                          stroke="#3b82f6" 
+                          strokeWidth={3}
+                          strokeDasharray="5 5"
+                          name="計画"
+                          dot={{ fill: '#3b82f6', strokeWidth: 2, r: 8 }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="actual" 
+                          stroke="#10b981" 
+                          strokeWidth={3}
+                          name="実績"
+                          dot={{ fill: '#10b981', strokeWidth: 2, r: 8 }}
+                        />
+                      </LineChart>
                     </ResponsiveContainer>
                   </div>
                 </CardContent>
@@ -855,31 +981,98 @@ export default function PlanVsActualPage() {
               </Card>
 
               {/* チャネル別パフォーマンスグラフ */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>チャネル別CPA比較</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={channelVariances}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" fontSize={12} />
-                        <YAxis fontSize={12} />
-                        <Tooltip 
-                          formatter={(value: number, name: string) => [
-                            `¥${value.toLocaleString()}`,
-                            name === 'planned.cpa' ? '計画CPA' : '実績CPA'
-                          ]}
-                        />
-                        <Legend />
-                        <Bar dataKey="planned.cpa" fill="#3b82f6" name="計画CPA" />
-                        <Bar dataKey="actual.cpa" fill="#10b981" name="実績CPA" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>チャネル別CPA比較</CardTitle>
+                    <CardDescription>
+                      各流入経路の計画CPA vs 実績CPA
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={channelVariances}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" fontSize={12} />
+                          <YAxis 
+                            fontSize={12}
+                            tickFormatter={(value) => `¥${(value / 1000).toFixed(0)}k`}
+                          />
+                          <Tooltip 
+                            formatter={(value: number, name: string) => [
+                              `¥${value.toLocaleString()}`,
+                              name === 'planned.cpa' ? '計画CPA' : '実績CPA'
+                            ]}
+                          />
+                          <Legend />
+                          <Line 
+                            type="monotone" 
+                            dataKey="planned.cpa" 
+                            stroke="#3b82f6" 
+                            strokeWidth={3}
+                            strokeDasharray="5 5"
+                            name="計画CPA"
+                            dot={{ fill: '#3b82f6', strokeWidth: 2, r: 6 }}
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="actual.cpa" 
+                            stroke="#ef4444" 
+                            strokeWidth={3}
+                            name="実績CPA"
+                            dot={{ fill: '#ef4444', strokeWidth: 2, r: 6 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>チャネル別獲得数比較</CardTitle>
+                    <CardDescription>
+                      各流入経路の計画獲得数 vs 実績獲得数
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={channelVariances}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" fontSize={12} />
+                          <YAxis fontSize={12} />
+                          <Tooltip 
+                            formatter={(value: number, name: string) => [
+                              `${value}人`,
+                              name === 'planned.acquisitions' ? '計画獲得数' : '実績獲得数'
+                            ]}
+                          />
+                          <Legend />
+                          <Line 
+                            type="monotone" 
+                            dataKey="planned.acquisitions" 
+                            stroke="#8b5cf6" 
+                            strokeWidth={3}
+                            strokeDasharray="5 5"
+                            name="計画獲得数"
+                            dot={{ fill: '#8b5cf6', strokeWidth: 2, r: 6 }}
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="actual.acquisitions" 
+                            stroke="#10b981" 
+                            strokeWidth={3}
+                            name="実績獲得数"
+                            dot={{ fill: '#10b981', strokeWidth: 2, r: 6 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
           </Tabs>
         </main>
