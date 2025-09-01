@@ -14,6 +14,8 @@ import { format, subMonths } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { useDashboardWithTargets } from '@/hooks/useDashboardWithTargets';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Area } from 'recharts';
+import { AIVarianceAnalysis } from '@/components/features/ai/ai-variance-analysis';
+import { DynamicForecastChart } from '@/components/features/forecasting/dynamic-forecast-chart';
 
 export default function PlanVsActualPage() {
   const { userProfile } = useAuthContext();
@@ -395,15 +397,41 @@ export default function PlanVsActualPage() {
             </Card>
           </div>
 
+          {/* AI分析セクション */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+            {/* AI乖離分析 */}
+            <div>
+              <AIVarianceAnalysis 
+                comparisonData={comparisonData}
+                historicalData={trendData}
+              />
+            </div>
+
+            {/* 動的予測 */}
+            <div>
+              <DynamicForecastChart 
+                historicalData={trendData.map(d => ({
+                  month: format(new Date(), 'yyyy') + '-' + d.month.replace('月', '').padStart(2, '0'),
+                  mrr: d.mrr,
+                  activeCustomers: d.customers,
+                  newAcquisitions: Math.round(d.customers * 0.1), // 仮の値
+                  churnRate: 5.0, // 仮の値
+                  totalExpenses: Math.round(d.mrr * 0.4) // 仮の値
+                }))}
+                currentMonth={selectedMonth}
+              />
+            </div>
+          </div>
+
           {/* 改善提案 */}
           <Card className="glass mt-8">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <AlertCircle className="w-5 h-5" />
-                改善提案
+                基本的な改善提案
               </CardTitle>
               <CardDescription>
-                目標未達項目への対策案
+                目標未達項目への基本的な対策案
               </CardDescription>
             </CardHeader>
             <CardContent>
