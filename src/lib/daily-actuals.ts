@@ -49,8 +49,10 @@ export async function saveDailyActual(input: DailyActualInput): Promise<DailyAct
 
 export async function getDailyActuals(userId: string, month: string): Promise<DailyActual[]> {
   try {
+    const [year, monthNum] = month.split('-').map(Number);
+    const lastDay = new Date(year, monthNum, 0).getDate();
     const startDate = `${month}-01`;
-    const endDate = `${month}-31`;
+    const endDate = `${month}-${lastDay.toString().padStart(2, '0')}`;
 
     const { data, error } = await supabase
       .from('daily_actuals')

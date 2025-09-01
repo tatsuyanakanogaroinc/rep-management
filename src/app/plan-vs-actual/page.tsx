@@ -353,7 +353,7 @@ export default function PlanVsActualPage() {
               <div className="flex items-center gap-4">
                 <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                   <SelectTrigger className="w-48 glass hover:bg-white/20">
-                    <SelectValue />
+                    <SelectValue placeholder="月を選択" />
                   </SelectTrigger>
                   <SelectContent>
                     {monthOptions.map((option) => (
