@@ -107,16 +107,10 @@ function FormLabel({
 function FormControl({ ...props }: React.ComponentProps<typeof Slot>) {
   const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
 
-  const ariaDescribedBy = React.useMemo(() => {
-    if (!error) return undefined;
-    return formMessageId;
-  }, [error, formMessageId]);
-
   return (
     <Slot
       data-slot="form-control"
       id={formItemId}
-      aria-describedby={ariaDescribedBy}
       aria-invalid={!!error}
       {...props}
     />

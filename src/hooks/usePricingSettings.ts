@@ -33,7 +33,12 @@ export function usePricingSettings() {
       const { data, error } = await supabase.rpc('get_current_pricing');
 
       if (error) {
-        console.error('Failed to fetch pricing settings:', error);
+        // RPCが存在しない場合は警告レベルに下げる
+        if (error.code === 'PGRST202' || error.message?.includes('function') || error.message?.includes('not found')) {
+          console.warn('get_current_pricing RPC not found, using default values');
+        } else {
+          console.error('Failed to fetch pricing settings:', error);
+        }
         // デフォルト値を返す
         return {
           id: 'default',
