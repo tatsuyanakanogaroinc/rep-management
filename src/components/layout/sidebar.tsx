@@ -22,7 +22,8 @@ import {
   LogOut,
   ChevronDown,
   ChevronRight,
-  Calculator
+  Calculator,
+  Calendar
 } from 'lucide-react';
 
 interface NavigationItem {
