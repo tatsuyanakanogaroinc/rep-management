@@ -35,7 +35,7 @@ interface NavigationItem {
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { userProfile, signOut } = useAuthContext();
+  const { user, userProfile, signOut } = useAuthContext();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<string[]>(['analytics']);
@@ -257,7 +257,7 @@ export function Sidebar() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleSignOut}
+              onClick={signOut}
               className="w-full justify-start text-muted-foreground hover:text-foreground"
             >
               <LogOut className="w-4 h-4 mr-2" />
@@ -268,7 +268,7 @@ export function Sidebar() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleSignOut}
+            onClick={signOut}
             className="w-full p-2"
             title="ログアウト"
           >
