@@ -56,9 +56,10 @@ export function Sidebar() {
       badge: 'New'
     },
     {
-      href: '/cohort-analysis',
-      label: 'コホート分析',
-      icon: <BarChart3 className="w-5 h-5" />
+      href: '/ai-analysis',
+      label: 'AI分析',
+      icon: <Brain className="w-5 h-5" />,
+      badge: 'New'
     },
     {
       href: '/plan-vs-actual',
@@ -68,6 +69,11 @@ export function Sidebar() {
     {
       href: '/monthly-report',
       label: '月次レポート',
+      icon: <BarChart3 className="w-5 h-5" />
+    },
+    {
+      href: '/cohort-analysis',
+      label: 'コホート分析',
       icon: <BarChart3 className="w-5 h-5" />
     },
     {
