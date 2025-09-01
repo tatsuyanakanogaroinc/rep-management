@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format, getDaysInMonth, subDays, addDays } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -34,6 +34,10 @@ import {
   BarChart3
 } from 'lucide-react';
 import { useMonthlyPlanning } from '@/hooks/useMonthlyPlanning';
+import { useAuthContext } from '@/lib/auth-context';
+import { saveDailyActual, getDailyActuals, getDailyActual } from '@/lib/daily-actuals';
+import { DailyActual as DBDailyActual } from '@/types/database';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface DailyActual {
   date: string;
@@ -50,6 +54,8 @@ interface DailyActual {
 
 export default function DailyAnalysisPage() {
   const { getPlanForMonth } = useMonthlyPlanning();
+  const { user } = useAuthContext();
+  const queryClient = useQueryClient();
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return format(now, 'yyyy-MM');
@@ -60,8 +66,31 @@ export default function DailyAnalysisPage() {
     return format(now, 'yyyy-MM-dd');
   });
 
-  // 日次実績データ（実際の実装ではローカルストレージやAPIから取得）
-  const [dailyActuals, setDailyActuals] = useState<Record<string, DailyActual>>({});
+  // 日次実績データをSupabaseから取得
+  const { data: dailyActuals = [], isLoading: isDailyLoading } = useQuery({
+    queryKey: ['daily-actuals', user?.id, selectedMonth],
+    queryFn: () => user ? getDailyActuals(user.id, selectedMonth) : Promise.resolve([]),
+    enabled: !!user
+  });
+  
+  // 選択日の実績データ
+  const { data: currentActual } = useQuery({
+    queryKey: ['daily-actual', user?.id, selectedDate],
+    queryFn: () => user ? getDailyActual(user.id, selectedDate) : Promise.resolve(null),
+    enabled: !!user
+  });
+
+  // 日次実績をRecord形式に変換
+  const dailyActualsMap = dailyActuals.reduce((acc, daily) => {
+    acc[daily.date] = {
+      date: daily.date,
+      newAcquisitions: daily.new_acquisitions,
+      revenue: daily.revenue,
+      expenses: daily.expenses,
+      channelData: daily.channel_data
+    };
+    return acc;
+  }, {} as Record<string, DailyActual>);
   
   // 日次実績入力フォーム
   const [dailyForm, setDailyForm] = useState({
@@ -126,7 +155,6 @@ export default function DailyAnalysisPage() {
   };
 
   const dailyTargets = getDailyTargets();
-  const currentActual = dailyActuals[selectedDate];
 
   // 月間累計実績の計算
   const getMonthlyAccumulated = () => {
@@ -144,7 +172,7 @@ export default function DailyAnalysisPage() {
     // 1日から選択日まで累計
     for (let day = 1; day <= selectedDay; day++) {
       const date = format(new Date(year, month - 1, day), 'yyyy-MM-dd');
-      const dayActual = dailyActuals[date];
+      const dayActual = dailyActualsMap[date];
       if (dayActual) {
         totalAcquisitions += dayActual.newAcquisitions;
         totalRevenue += dayActual.revenue;
@@ -185,33 +213,39 @@ export default function DailyAnalysisPage() {
 
   const monthlyAccumulated = getMonthlyAccumulated();
 
+  // 日次実績保存のミューテーション
+  const saveDailyMutation = useMutation({
+    mutationFn: saveDailyActual,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['daily-actuals'] });
+      queryClient.invalidateQueries({ queryKey: ['daily-actual'] });
+      
+      // フォームリセット
+      setDailyForm({
+        newAcquisitions: '',
+        revenue: '',
+        expenses: '',
+        channels: {}
+      });
+    }
+  });
+
   // 日次実績入力
   const handleDailySubmit = () => {
-    const newActual: DailyActual = {
+    const channelData = Object.entries(dailyForm.channels).reduce((acc, [channel, data]) => {
+      acc[channel] = {
+        acquisitions: parseInt(data.acquisitions) || 0,
+        cost: parseInt(data.cost) || 0
+      };
+      return acc;
+    }, {} as Record<string, { acquisitions: number; cost: number }>);
+
+    saveDailyMutation.mutate({
       date: selectedDate,
       newAcquisitions: parseInt(dailyForm.newAcquisitions) || 0,
       revenue: parseInt(dailyForm.revenue) || 0,
       expenses: parseInt(dailyForm.expenses) || 0,
-      channelData: Object.entries(dailyForm.channels).reduce((acc, [channel, data]) => {
-        acc[channel] = {
-          acquisitions: parseInt(data.acquisitions) || 0,
-          cost: parseInt(data.cost) || 0
-        };
-        return acc;
-      }, {} as Record<string, { acquisitions: number; cost: number }>)
-    };
-    
-    setDailyActuals(prev => ({
-      ...prev,
-      [selectedDate]: newActual
-    }));
-    
-    // フォームリセット
-    setDailyForm({
-      newAcquisitions: '',
-      revenue: '',
-      expenses: '',
-      channels: {}
+      channelData
     });
   };
 
@@ -309,7 +343,7 @@ export default function DailyAnalysisPage() {
     
     for (let day = 1; day <= Math.min(selectedDay, daysInMonth); day++) {
       const date = format(new Date(year, month - 1, day), 'yyyy-MM-dd');
-      const dayActual = dailyActuals[date];
+      const dayActual = dailyActualsMap[date];
       
       cumulativeTarget += dailyTargets.dailyNewAcquisitions;
       cumulativeActual += dayActual?.newAcquisitions || 0;
@@ -654,8 +688,12 @@ export default function DailyAnalysisPage() {
                         </div>
                       )}
 
-                      <Button onClick={handleDailySubmit} className="w-full">
-                        実績を保存
+                      <Button 
+                        onClick={handleDailySubmit} 
+                        className="w-full"
+                        disabled={saveDailyMutation.isPending}
+                      >
+                        {saveDailyMutation.isPending ? '保存中...' : '実績を保存'}
                       </Button>
                     </CardContent>
                   </Card>

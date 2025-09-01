@@ -78,3 +78,18 @@ export interface Budget {
   created_at: string;
   updated_at: string;
 }
+
+export interface DailyActual {
+  id: string;
+  user_id: string;
+  date: string;
+  new_acquisitions: number;
+  revenue: number;
+  expenses: number;
+  channel_data: Record<string, {
+    acquisitions: number;
+    cost: number;
+  }>;
+  created_at: string;
+  updated_at: string;
+}

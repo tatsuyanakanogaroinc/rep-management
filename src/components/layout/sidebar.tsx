@@ -51,18 +51,6 @@ export function Sidebar() {
       icon: <LayoutDashboard className="w-5 h-5" />
     },
     {
-      href: '/monthly-planning',
-      label: '月次計画',
-      icon: <Calculator className="w-5 h-5" />,
-      badge: 'New'
-    },
-    {
-      href: '/ai-analysis',
-      label: 'AI分析',
-      icon: <Brain className="w-5 h-5" />,
-      badge: 'New'
-    },
-    {
       href: '/plan-vs-actual',
       label: '予実管理',
       icon: <Target className="w-5 h-5" />
@@ -73,14 +61,26 @@ export function Sidebar() {
       icon: <BarChart3 className="w-5 h-5" />
     },
     {
+      href: '/daily-analysis',
+      label: '日次レポート',
+      icon: <Calendar className="w-5 h-5" />
+    },
+    {
+      href: '/ai-analysis',
+      label: 'AI分析',
+      icon: <Brain className="w-5 h-5" />,
+      badge: 'New'
+    },
+    {
+      href: '/monthly-planning',
+      label: '月次計画',
+      icon: <Calculator className="w-5 h-5" />,
+      badge: 'New'
+    },
+    {
       href: '/cohort-analysis',
       label: 'コホート分析',
       icon: <BarChart3 className="w-5 h-5" />
-    },
-    {
-      href: '/daily-analysis',
-      label: '日次分析',
-      icon: <Calendar className="w-5 h-5" />
     }
   ];
 

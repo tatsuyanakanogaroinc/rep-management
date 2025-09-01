@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line } from 'recharts';
 import { useMonthlyPlanning, type MonthlyPlan, type ChannelPlan } from '@/hooks/useMonthlyPlanning';
+import { useDailyActuals } from '@/hooks/useDailyActuals';
 
 interface ActualData {
   month: string;
@@ -62,6 +63,7 @@ interface VarianceData {
 export default function PlanVsActualPage() {
   const { userProfile } = useAuthContext();
   const { getPlanForMonth } = useMonthlyPlanning();
+  const { monthlyTotals: actualFromDaily } = useDailyActuals(selectedMonth);
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return format(now, 'yyyy-MM');
@@ -93,29 +95,44 @@ export default function PlanVsActualPage() {
     }
   } as MonthlyPlan;
 
-  // 実績データ（月次計画のチャネル構成に基づいて初期化）
+  // 実績データ（日次データから計算または手動入力）
   const [actualData, setActualData] = useState<ActualData>(() => ({
     month: selectedMonth,
-    newAcquisitions: 0,
+    newAcquisitions: actualFromDaily.newAcquisitions || 0,
     totalCustomers: 0,
     churnCount: 0,
-    mrr: 0,
-    expenses: 0,
+    mrr: actualFromDaily.revenue || 0,
+    expenses: actualFromDaily.expenses || 0,
     channels: planData.channels.map(channel => ({
       name: channel.name,
-      actualAcquisitions: 0,
-      actualCpa: 0,
-      actualCost: 0
+      actualAcquisitions: actualFromDaily.channels[channel.name]?.acquisitions || 0,
+      actualCpa: actualFromDaily.channels[channel.name]?.acquisitions > 0 ? 
+        actualFromDaily.channels[channel.name].cost / actualFromDaily.channels[channel.name].acquisitions : 0,
+      actualCost: actualFromDaily.channels[channel.name]?.cost || 0
     }))
   }));
 
-  // 月が変更されたときに実績データのチャネル構成を更新
+  // 日次データまたは月変更時に実績データを更新
   useEffect(() => {
     setActualData(prev => ({
       ...prev,
       month: selectedMonth,
+      newAcquisitions: actualFromDaily.newAcquisitions || prev.newAcquisitions,
+      mrr: actualFromDaily.revenue || prev.mrr,
+      expenses: actualFromDaily.expenses || prev.expenses,
       channels: planData.channels.map(channel => {
         const existingChannel = prev.channels.find(c => c.name === channel.name);
+        const dailyChannel = actualFromDaily.channels[channel.name];
+        
+        if (dailyChannel) {
+          return {
+            name: channel.name,
+            actualAcquisitions: dailyChannel.acquisitions,
+            actualCpa: dailyChannel.acquisitions > 0 ? dailyChannel.cost / dailyChannel.acquisitions : 0,
+            actualCost: dailyChannel.cost
+          };
+        }
+        
         return existingChannel || {
           name: channel.name,
           actualAcquisitions: 0,
@@ -124,7 +141,7 @@ export default function PlanVsActualPage() {
         };
       })
     }));
-  }, [selectedMonth, planData.channels]);
+  }, [selectedMonth, planData.channels, actualFromDaily]);
 
   // 過去12ヶ月の選択肢を生成
   const generateMonthOptions = () => {
