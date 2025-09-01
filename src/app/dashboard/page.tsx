@@ -4,22 +4,20 @@ import { ProtectedRoute } from '@/components/auth/protected-route';
 import { useAuthContext } from '@/lib/auth-context';
 import { AppLayout } from '@/components/layout/app-layout';
 import { PageLoading } from '@/components/ui/loading';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useDashboardWithTargets } from '@/hooks/useDashboardWithTargets';
 import { ProgressCard } from '@/components/ui/progress-card';
 import { AIPredictionsCard } from '@/components/features/ai/ai-predictions-card';
-import { MonthlyTargetComparison } from '@/components/features/dashboard/monthly-target-comparison';
 import { MonthlyTrendChart } from '@/components/features/dashboard/monthly-trend-chart';
 import { QuickInputWidget } from '@/components/features/dashboard/quick-input-widget';
-import Link from 'next/link';
 import { useState } from 'react';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { format } from 'date-fns';
 import { ja } from 'date-fns/locale';
+import { TrendingUp, TrendingDown, Target, AlertCircle } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { user, userProfile, signOut } = useAuthContext();
+  const { user, userProfile } = useAuthContext();
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return format(now, 'yyyy-MM');
@@ -27,10 +25,6 @@ export default function DashboardPage() {
 
   // 認証されている場合のみデータを取得
   const { data: dashboardData, isLoading, error } = useDashboardWithTargets(selectedMonth, !!user && !!userProfile);
-
-  const handleSignOut = async () => {
-    await signOut();
-  };
 
   // 過去12ヶ月の選択肢を生成
   const generateMonthOptions = () => {
@@ -98,60 +92,19 @@ export default function DashboardPage() {
     }
   ];
 
-  // よく使う機能を厳選して表示（管理者には追加機能を表示）
-  const quickActions = [
-    {
-      title: '計画vs実績分析',
-      description: '目標達成状況の詳細分析',
-      icon: '📊',
-      href: '/plan-vs-actual',
-      color: 'from-blue-500 to-purple-500'
-    },
-    {
-      title: '日報を入力',
-      description: '今日の活動を記録',
-      icon: '📝',
-      href: '/daily-report',
-      color: 'from-green-500 to-blue-500'
-    },
-    {
-      title: '月次レポート',
-      description: '詳細な月次分析を表示',
-      icon: '📈',
-      href: '/monthly-report',
-      color: 'from-purple-500 to-pink-500'
-    },
-    {
-      title: '計画シミュレーション',
-      description: '事業計画と予算配分の最適化',
-      icon: '🚀',
-      href: '/planning',
-      color: 'from-orange-500 to-red-500'
-    },
-    {
-      title: '目標管理',
-      description: '月次目標の設定と進捗確認',
-      icon: '🎯',
-      href: '/targets',
-      color: 'from-teal-500 to-green-500'
-    },
-    ...(userProfile?.role === 'admin' ? [
-      {
-        title: 'ユーザー管理',
-        description: '新規ユーザーの作成と管理',
-        icon: '👥',
-        href: '/user-management',
-        color: 'from-indigo-500 to-purple-500'
-      },
-      {
-        title: '成長パラメータ設定',
-        description: '事業成長の基本パラメータ設定',
-        icon: '📈',
-        href: '/settings/growth-parameters',
-        color: 'from-teal-500 to-green-500'
-      }
-    ] : [])
-  ];
+  // 月次目標の達成状況を計算
+  const getTargetStatus = (actual: number, target: number, isInverted: boolean = false) => {
+    const percentage = target > 0 ? (actual / target) * 100 : 0;
+    if (isInverted) {
+      if (percentage <= 100) return { status: 'good', color: 'text-green-600', bgColor: 'bg-green-50' };
+      if (percentage <= 120) return { status: 'warning', color: 'text-orange-600', bgColor: 'bg-orange-50' };
+      return { status: 'danger', color: 'text-red-600', bgColor: 'bg-red-50' };
+    } else {
+      if (percentage >= 90) return { status: 'good', color: 'text-green-600', bgColor: 'bg-green-50' };
+      if (percentage >= 70) return { status: 'warning', color: 'text-orange-600', bgColor: 'bg-orange-50' };
+      return { status: 'danger', color: 'text-red-600', bgColor: 'bg-red-50' };
+    }
+  };
 
   return (
     <ProtectedRoute>
@@ -194,160 +147,124 @@ export default function DashboardPage() {
 
         {/* メインコンテンツ */}
         <main className="relative z-10 max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-          {/* データ読み込み中またはエラー時の表示 */}
+          {/* データ読み込み中 */}
           {isLoading && (
             <PageLoading message={`${format(new Date(selectedMonth + '-01'), 'yyyy年MM月', { locale: ja })}のデータを取得しています`} />
           )}
 
-          {error && (
-            <div className="mb-8 p-4 bg-orange-50 border border-orange-200 rounded-xl">
-              <div className="flex items-center">
-                <div className="text-orange-500 mr-3">⚠️</div>
+          {!isLoading && (
+            <div className="space-y-8">
+              {/* 当月の実績サマリー */}
+              <div className="mb-8">
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <Target className="w-5 h-5" />
+                  {format(new Date(selectedMonth + '-01'), 'yyyy年MM月', { locale: ja })}の実績
+                </h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {progressMetrics.map((metric) => {
+                    const targetStatus = getTargetStatus(metric.actual, metric.target || 0, metric.isInverted);
+                    return (
+                      <Card key={metric.title} className="relative overflow-hidden">
+                        <div className={`absolute top-0 right-0 w-20 h-20 ${targetStatus.bgColor} rounded-bl-full opacity-20`} />
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-2xl">{metric.icon}</span>
+                            <span className={`text-sm font-medium ${targetStatus.color}`}>
+                              {metric.progress}%
+                            </span>
+                          </div>
+                          <CardTitle className="text-sm text-muted-foreground">{metric.title}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-2xl font-bold">{metric.value}</p>
+                          <div className="mt-2 space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-muted-foreground">目標</span>
+                              <span className="font-medium">
+                                {metric.unit === 'currency' ? `¥${metric.target?.toLocaleString()}` :
+                                 metric.unit === 'percentage' ? `${metric.target}%` : metric.target}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-muted-foreground">差異</span>
+                              <span className={`font-medium ${metric.difference >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {metric.difference >= 0 ? '+' : ''}{metric.difference}
+                              </span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 支出状況 */}
+              {dashboardData?.monthlyExpensesTarget && (
+                <Card className="mb-8">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">月次支出状況</CardTitle>
+                      <span className={`text-sm font-medium ${
+                        dashboardData.expensesProgress <= 80 ? 'text-green-600' :
+                        dashboardData.expensesProgress <= 100 ? 'text-orange-600' : 'text-red-600'
+                      }`}>
+                        予算の{dashboardData.expensesProgress}%使用
+                      </span>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-2xl font-bold">¥{dashboardData.totalExpenses.toLocaleString()}</span>
+                      <span className="text-sm text-muted-foreground">/ ¥{dashboardData.monthlyExpensesTarget.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full transition-all duration-300 ${
+                          dashboardData.expensesProgress <= 80 ? 'bg-green-500' :
+                          dashboardData.expensesProgress <= 100 ? 'bg-orange-500' : 'bg-red-500'
+                        }`}
+                        style={{ width: `${Math.min(100, dashboardData.expensesProgress)}%` }}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* 月次推移グラフ */}
+              <div className="mb-8">
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5" />
+                  月次推移と計画
+                </h2>
+                <Card>
+                  <CardContent className="p-6">
+                    <MonthlyTrendChart currentMonth={selectedMonth} />
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* クイック入力 */}
                 <div>
-                  <h3 className="font-medium text-orange-800">データの読み込みに問題があります</h3>
-                  <p className="text-sm text-orange-600">基本的なデータを表示しています。しばらく待ってから再度お試しください。</p>
+                  <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5" />
+                    クイック入力
+                  </h2>
+                  <QuickInputWidget currentMonth={selectedMonth} />
+                </div>
+
+                {/* AI予測 */}
+                <div>
+                  <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5" />
+                    AI予測・インサイト
+                  </h2>
+                  <AIPredictionsCard currentMonth={selectedMonth} />
                 </div>
               </div>
             </div>
-          )}
-
-          {/* データが利用可能または読み込み中でも基本レイアウトを表示 */}
-          {!isLoading && (
-            <>
-          {/* メトリクスカード */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {progressMetrics.map((metric, index) => (
-              <div 
-                key={metric.title}
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <ProgressCard
-                  title={metric.title}
-                  value={metric.value}
-                  target={metric.target}
-                  actual={metric.actual}
-                  progress={metric.progress}
-                  difference={metric.difference}
-                  change={metric.change}
-                  icon={metric.icon}
-                  color={metric.color}
-                  unit={metric.unit}
-                  isInverted={metric.isInverted}
-                />
-              </div>
-            ))}
-          </div>
-
-          {/* 支出メトリクス */}
-          {dashboardData?.monthlyExpensesTarget && (
-            <div className="mb-8">
-              <Card className="glass">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    💰 月次支出管理
-                  </CardTitle>
-                  <CardDescription>
-                    予算との比較と支出状況
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <ProgressCard
-                      title="月次支出"
-                      value={`¥${dashboardData.totalExpenses.toLocaleString()}`}
-                      target={dashboardData.monthlyExpensesTarget}
-                      actual={dashboardData.totalExpenses}
-                      progress={dashboardData.expensesProgress}
-                      difference={dashboardData.expensesDifference}
-                      icon="💸"
-                      color="from-red-500 to-pink-500"
-                      unit="currency"
-                      isInverted={true}
-                    />
-                    <div className="flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="text-4xl mb-2">
-                          {dashboardData.expensesProgress <= 80 ? '✅' : 
-                           dashboardData.expensesProgress <= 100 ? '⚠️' : '🚨'}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {dashboardData.expensesProgress <= 80 ? '予算内で順調' : 
-                           dashboardData.expensesProgress <= 100 ? '予算上限に注意' : '予算超過'}
-                        </p>
-                        <p className="text-lg font-semibold mt-2">
-                          予算残り: ¥{Math.max(0, (dashboardData.monthlyExpensesTarget || 0) - dashboardData.totalExpenses).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* クイック入力とチャート */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-            {/* クイック入力ウィジェット */}
-            <div className="lg:col-span-1 animate-fade-in" style={{ animationDelay: '300ms' }}>
-              <QuickInputWidget currentMonth={selectedMonth} />
-            </div>
-            
-            {/* 月次推移グラフ */}
-            <div className="lg:col-span-2 animate-fade-in" style={{ animationDelay: '350ms' }}>
-              <MonthlyTrendChart currentMonth={selectedMonth} />
-            </div>
-          </div>
-
-          {/* 月次目標との比較 */}
-          <div className="mb-8 animate-fade-in" style={{ animationDelay: '400ms' }}>
-            <MonthlyTargetComparison selectedMonth={selectedMonth} />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* クイックアクション */}
-            <div className="glass rounded-2xl p-6 shadow-soft animate-fade-in" style={{ animationDelay: '500ms' }}>
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold text-foreground mb-2">クイックアクション</h2>
-                <p className="text-muted-foreground">よく使う機能にすぐアクセス</p>
-              </div>
-              <div className="space-y-3">
-                {quickActions.map((action, index) => (
-                  <Link 
-                    key={action.title} 
-                    href={action.href}
-                    className="block no-underline"
-                  >
-                    <div className="group p-4 rounded-xl glass hover:bg-white/50 transition-all duration-200 cursor-pointer relative z-10 border border-transparent hover:border-primary/20">
-                      <div className="flex items-center space-x-4">
-                        <div className={`flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-r ${action.color} text-white text-xl shadow-lg group-hover:scale-105 transition-transform duration-200`}>
-                          {action.icon}
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-medium text-foreground group-hover:text-primary transition-colors">
-                            {action.title}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            {action.description}
-                          </p>
-                        </div>
-                        <div className="ml-auto">
-                          <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            {/* AI予測とアラート */}
-            <div className="animate-fade-in" style={{ animationDelay: '600ms' }}>
-              <AIPredictionsCard currentMonth={selectedMonth} />
-            </div>
-          </div>
-            </>
           )}
         </main>
         </div>
