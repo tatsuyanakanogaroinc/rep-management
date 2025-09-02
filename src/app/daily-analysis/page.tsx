@@ -640,8 +640,9 @@ export default function DailyAnalysisPage() {
                                 <h4 className="font-medium mb-3">{channel.name}</h4>
                                 <div className="grid grid-cols-2 gap-3">
                                   <div>
-                                    <Label>獲得数</Label>
+                                    <Label htmlFor={`daily-${channel.name}-acquisitions`}>獲得数</Label>
                                     <Input
+                                      id={`daily-${channel.name}-acquisitions`}
                                       type="number"
                                       placeholder="0"
                                       value={dailyForm.channels[channel.name]?.acquisitions || ''}
@@ -661,8 +662,9 @@ export default function DailyAnalysisPage() {
                                     </div>
                                   </div>
                                   <div>
-                                    <Label>広告費</Label>
+                                    <Label htmlFor={`daily-${channel.name}-cost`}>広告費</Label>
                                     <Input
+                                      id={`daily-${channel.name}-cost`}
                                       type="number"
                                       placeholder="0"
                                       value={dailyForm.channels[channel.name]?.cost || ''}

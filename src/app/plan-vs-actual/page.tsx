@@ -798,8 +798,9 @@ export default function PlanVsActualPage() {
                           <h4 className="font-medium">{channel.name}</h4>
                           <div className="grid grid-cols-3 gap-3">
                             <div>
-                              <Label className="text-xs">獲得数</Label>
+                              <Label htmlFor={`${channel.name}-acquisitions`} className="text-xs">獲得数</Label>
                               <Input
+                                id={`${channel.name}-acquisitions`}
                                 type="number"
                                 value={channel.actualAcquisitions}
                                 onChange={(e) => handleChannelActualChange(channel.name, 'actualAcquisitions', parseInt(e.target.value) || 0)}
@@ -810,8 +811,9 @@ export default function PlanVsActualPage() {
                               </p>
                             </div>
                             <div>
-                              <Label className="text-xs">実際のCPA</Label>
+                              <Label htmlFor={`${channel.name}-cpa`} className="text-xs">実際のCPA</Label>
                               <Input
+                                id={`${channel.name}-cpa`}
                                 type="number"
                                 value={channel.actualCpa}
                                 onChange={(e) => handleChannelActualChange(channel.name, 'actualCpa', parseInt(e.target.value) || 0)}
@@ -822,8 +824,9 @@ export default function PlanVsActualPage() {
                               </p>
                             </div>
                             <div>
-                              <Label className="text-xs">実際のコスト</Label>
+                              <Label htmlFor={`${channel.name}-cost`} className="text-xs">実際のコスト</Label>
                               <Input
+                                id={`${channel.name}-cost`}
                                 type="number"
                                 value={channel.actualCost}
                                 onChange={(e) => handleChannelActualChange(channel.name, 'actualCost', parseInt(e.target.value) || 0)}
