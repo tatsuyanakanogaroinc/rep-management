@@ -19,16 +19,22 @@ export function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('=== LOGIN FORM SUBMIT ===');
+    console.log('Email:', email);
+    console.log('Password length:', password.length);
+    
     setLoading(true);
     setError(null);
 
     try {
-      // ログイン処理を高速化
+      console.log('Starting signIn...');
       const startTime = performance.now();
-      const { error } = await signIn(email, password);
+      const { data, error } = await signIn(email, password);
+      
+      console.log('SignIn result:', { data: !!data, error: error?.message });
       
       if (error) {
-        console.error('SignIn error:', error);
+        console.error('SignIn error details:', error);
         
         // エラーメッセージの最適化
         if (error.message.includes('Invalid login credentials')) {
@@ -38,12 +44,13 @@ export function LoginForm() {
         } else if (error.message.includes('Too many requests')) {
           setError('ログイン試行回数が上限に達しました。しばらく待ってから再度お試しください。');
         } else {
-          setError('ログインに失敗しました。しばらく待ってから再度お試しください。');
+          setError(`ログインエラー: ${error.message}`);
         }
       } else {
         // ログイン成功 - 即座にリダイレクト
         const loginTime = performance.now() - startTime;
         console.log(`Login completed in ${loginTime.toFixed(2)}ms`);
+        console.log('Redirecting to dashboard...');
         
         // 即座にリダイレクト（遅延なし）
         router.push('/dashboard');
@@ -56,12 +63,13 @@ export function LoginForm() {
         } else if (err.message.includes('Supabase configuration error')) {
           setError('システム設定エラーが発生しました。管理者にお問い合わせください。');
         } else {
-          setError('ログイン中にエラーが発生しました。再度お試しください。');
+          setError(`ログイン中にエラーが発生しました: ${err.message}`);
         }
       } else {
         setError('ログイン中にエラーが発生しました');
       }
     } finally {
+      console.log('Setting loading to false');
       setLoading(false);
     }
   };
@@ -69,7 +77,11 @@ export function LoginForm() {
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="glass rounded-2xl shadow-soft border-0 p-8 backdrop-blur-lg">
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={(e) => {
+          console.log('=== FORM SUBMIT EVENT ===');
+          console.log('Event:', e);
+          handleSubmit(e);
+        }} className="space-y-6">
           {error && (
             <Alert variant="destructive" className="border-0 bg-destructive/10 text-destructive">
               <AlertDescription>{error}</AlertDescription>
@@ -108,6 +120,11 @@ export function LoginForm() {
           
           <Button 
             type="submit" 
+            onClick={(e) => {
+              console.log('=== BUTTON CLICKED ===');
+              console.log('Event:', e);
+              // フォーム送信は handleSubmit で処理される
+            }}
             className="w-full h-12 rounded-xl gradient-primary text-white border-0 shadow-soft hover:shadow-glow transition-all duration-300 font-medium text-base disabled:opacity-50 disabled:cursor-not-allowed" 
             disabled={loading}
           >
