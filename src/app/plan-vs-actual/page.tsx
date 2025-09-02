@@ -1,3 +1,7 @@
+// 一時的にデバッグ版を使用
+export { default } from './page-debug';
+
+/*
 'use client';
 
 import { ProtectedRoute } from '@/components/auth/protected-route';
@@ -1057,4 +1061,4 @@ export default function PlanVsActualPage() {
       </AppLayout>
     </ProtectedRoute>
   );
-}
+}*/
