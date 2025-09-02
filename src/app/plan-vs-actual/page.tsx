@@ -114,16 +114,18 @@ export default function PlanVsActualPage() {
       newAcquisitions: actualFromDaily.newAcquisitions || prev.newAcquisitions,
       mrr: actualFromDaily.revenue || prev.mrr,
       expenses: actualFromDaily.expenses || prev.expenses,
-      channels: (planData.channels || []).map(channel => {
-        const existingChannel = prev.channels.find(c => c.name === channel.name);
-        const dailyChannel = actualFromDaily.channels[channel.name];
+      channels: (planData.channels || [])
+        .filter(channel => channel && channel.name && typeof channel.name === 'string')
+        .map(channel => {
+        const existingChannel = prev.channels.find(c => c && c.name === channel.name);
+        const dailyChannel = actualFromDaily.channels?.[channel.name];
         
         if (dailyChannel) {
           return {
             name: channel.name,
-            actualAcquisitions: dailyChannel.acquisitions,
-            actualCpa: dailyChannel.acquisitions > 0 ? dailyChannel.cost / dailyChannel.acquisitions : 0,
-            actualCost: dailyChannel.cost
+            actualAcquisitions: dailyChannel.acquisitions || 0,
+            actualCpa: dailyChannel.acquisitions > 0 ? (dailyChannel.cost || 0) / dailyChannel.acquisitions : 0,
+            actualCost: dailyChannel.cost || 0
           };
         }
         
@@ -134,6 +136,7 @@ export default function PlanVsActualPage() {
           actualCost: 0
         };
       })
+      .filter(channel => channel && channel.name) // 最終的に無効なチャネルを除外
     }));
   }, [selectedMonth, planData.channels, actualFromDaily]);
 
@@ -228,17 +231,20 @@ export default function PlanVsActualPage() {
   const handleChannelActualChange = (channelName: string, field: keyof ChannelActual, value: number) => {
     setActualData(prev => ({
       ...prev,
-      channels: prev.channels.map(channel => 
-        channel.name === channelName ? { ...channel, [field]: value } : channel
-      )
+      channels: prev.channels
+        .filter(channel => channel && channel.name)
+        .map(channel => 
+          channel.name === channelName ? { ...channel, [field]: value } : channel
+        )
     }));
   };
 
   // チャネル別CPA差異計算
   const calculateChannelVariances = () => {
     return (planData.channels || [])
+      .filter(plannedChannel => plannedChannel && plannedChannel.name)
       .map((plannedChannel) => {
-        const actualChannel = actualData.channels.find(c => c.name === plannedChannel.name);
+        const actualChannel = actualData.channels.find(c => c && c.name === plannedChannel.name);
         if (!actualChannel) return null;
 
       const cpaVariance = actualChannel.actualCpa - plannedChannel.plannedCpa;
@@ -749,8 +755,10 @@ export default function PlanVsActualPage() {
                     <div className="pt-4 border-t">
                       <h4 className="font-medium text-sm mb-3">チャネル別計画</h4>
                       <div className="space-y-2">
-                        {(planData.channels || []).map((channel, index) => (
-                          <div key={`plan-channel-${channel.name || index}`} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                        {(planData.channels || [])
+                          .filter(channel => channel && channel.name)
+                          .map((channel, index) => (
+                          <div key={`plan-channel-${channel.name}-${index}`} className="flex justify-between items-center p-2 bg-gray-50 rounded">
                             <span className="text-sm">{channel.name}</span>
                             <div className="text-right">
                               <div className="text-sm font-medium">{channel.plannedAcquisitions}人</div>
@@ -787,11 +795,11 @@ export default function PlanVsActualPage() {
                   <CardContent className="space-y-4">
                     {(actualData.channels || [])
                       .filter(channel => channel && channel.name)
-                      .map((channel) => {
+                      .map((channel, index) => {
                         const plannedChannel = (planData.channels || []).find(p => p.name === channel.name);
                         
                         return (
-                          <div key={`channel-${channel.name}`} className="border rounded-lg p-4 space-y-3">
+                          <div key={`actual-channel-${channel.name}-${index}`} className="border rounded-lg p-4 space-y-3">
                           <h4 className="font-medium">{channel.name}</h4>
                           <div className="grid grid-cols-3 gap-3">
                             <div>
@@ -907,9 +915,11 @@ export default function PlanVsActualPage() {
                 <CardContent>
                   <div className="space-y-6">
                     {channelVariances
-                      .filter(channel => channel !== null && channel !== undefined)
-                      .map((channel, index) => (
-                        <div key={channel.name || index} className="border rounded-lg p-4">
+                      .filter(channel => channel !== null && channel !== undefined && channel.name)
+                      .map((channel, index) => {
+                        const safeChannelName = channel.name || `channel-${index}`;
+                        return (
+                        <div key={`variance-${safeChannelName}-${index}`} className="border rounded-lg p-4">
                           <h4 className="font-semibold text-lg mb-4">{channel.name}</h4>
                         
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -956,8 +966,8 @@ export default function PlanVsActualPage() {
                           </div>
                         </div>
                         </div>
-                      )
-                    )}
+                        );
+                      })}
                   </div>
                 </CardContent>
               </Card>
