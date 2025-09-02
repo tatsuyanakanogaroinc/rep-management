@@ -8,7 +8,7 @@ interface AppLayoutProps {
   showSidebar?: boolean;
 }
 
-export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
+export default function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
   if (!showSidebar) {
     return <>{children}</>;
   }
@@ -30,3 +30,5 @@ export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
     </div>
   );
 }
+
+export { AppLayout };
