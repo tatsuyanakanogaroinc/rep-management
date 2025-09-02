@@ -10,7 +10,9 @@ export function useDailyActuals(month: string) {
   const { data: dailyActuals = [], isLoading } = useQuery({
     queryKey: ['daily-actuals', user?.id, month],
     queryFn: () => user ? getDailyActuals(user.id, month) : Promise.resolve([]),
-    enabled: !!user
+    enabled: !!user && !!month,
+    staleTime: 5 * 60 * 1000, // 5分間キャッシュ
+    retry: 1
   });
 
   const monthlyTotals = aggregateMonthlyActuals(dailyActuals);

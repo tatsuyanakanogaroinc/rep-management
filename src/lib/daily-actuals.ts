@@ -109,7 +109,7 @@ export async function getDailyActual(userId: string, date: string): Promise<Dail
   }
 }
 
-export function aggregateMonthlyActuals(dailyActuals: DailyActual[]) {
+export function aggregateMonthlyActuals(dailyActuals: DailyActual[] = []) {
   const totals = {
     newAcquisitions: 0,
     revenue: 0,
@@ -117,18 +117,26 @@ export function aggregateMonthlyActuals(dailyActuals: DailyActual[]) {
     channels: {} as Record<string, { acquisitions: number; cost: number }>
   };
 
+  if (!Array.isArray(dailyActuals)) {
+    return totals;
+  }
+
   dailyActuals.forEach(daily => {
     totals.newAcquisitions += daily.new_acquisitions;
     totals.revenue += daily.revenue;
     totals.expenses += daily.expenses;
 
-    Object.entries(daily.channel_data).forEach(([channel, data]) => {
-      if (!totals.channels[channel]) {
-        totals.channels[channel] = { acquisitions: 0, cost: 0 };
-      }
-      totals.channels[channel].acquisitions += data.acquisitions;
-      totals.channels[channel].cost += data.cost;
-    });
+    if (daily.channel_data && typeof daily.channel_data === 'object') {
+      Object.entries(daily.channel_data).forEach(([channel, data]) => {
+        if (data && typeof data === 'object' && 'acquisitions' in data && 'cost' in data) {
+          if (!totals.channels[channel]) {
+            totals.channels[channel] = { acquisitions: 0, cost: 0 };
+          }
+          totals.channels[channel].acquisitions += data.acquisitions || 0;
+          totals.channels[channel].cost += data.cost || 0;
+        }
+      });
+    }
   });
 
   return totals;
