@@ -1,2 +1,2 @@
-// Step 1: 基本機能の段階的復元
-export { default } from './page-step1';
+// Step 2: グラフ機能追加
+export { default } from './page-step2';
