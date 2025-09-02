@@ -24,13 +24,17 @@ CREATE TABLE IF NOT EXISTS public.users (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
--- Create indexes
-CREATE INDEX idx_users_email ON public.users(email);
-CREATE INDEX idx_users_role ON public.users(role);
-CREATE INDEX idx_users_active ON public.users(is_active);
+-- Create indexes (IF NOT EXISTS)
+CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
+CREATE INDEX IF NOT EXISTS idx_users_role ON public.users(role);
+CREATE INDEX IF NOT EXISTS idx_users_active ON public.users(is_active);
 
 -- Enable RLS
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view all profiles" ON public.users;
+DROP POLICY IF EXISTS "Admin users can manage all users" ON public.users;
 
 -- Create RLS policies
 CREATE POLICY "Users can view all profiles" ON public.users
@@ -53,6 +57,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Drop existing trigger if it exists
+DROP TRIGGER IF EXISTS handle_users_updated_at ON public.users;
+
+-- Create trigger
 CREATE TRIGGER handle_users_updated_at
   BEFORE UPDATE ON public.users
   FOR EACH ROW
@@ -95,13 +103,19 @@ CREATE TABLE IF NOT EXISTS public.daily_actuals (
   UNIQUE(user_id, date)
 );
 
--- Create indexes
-CREATE INDEX idx_daily_actuals_user_id ON public.daily_actuals(user_id);
-CREATE INDEX idx_daily_actuals_date ON public.daily_actuals(date);
-CREATE INDEX idx_daily_actuals_user_date ON public.daily_actuals(user_id, date);
+-- Create indexes (IF NOT EXISTS)
+CREATE INDEX IF NOT EXISTS idx_daily_actuals_user_id ON public.daily_actuals(user_id);
+CREATE INDEX IF NOT EXISTS idx_daily_actuals_date ON public.daily_actuals(date);
+CREATE INDEX IF NOT EXISTS idx_daily_actuals_user_date ON public.daily_actuals(user_id, date);
 
 -- Enable RLS
 ALTER TABLE public.daily_actuals ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view their own daily actuals" ON public.daily_actuals;
+DROP POLICY IF EXISTS "Users can insert their own daily actuals" ON public.daily_actuals;
+DROP POLICY IF EXISTS "Users can update their own daily actuals" ON public.daily_actuals;
+DROP POLICY IF EXISTS "Users can delete their own daily actuals" ON public.daily_actuals;
 
 -- Create RLS policies
 CREATE POLICY "Users can view their own daily actuals" ON public.daily_actuals
@@ -125,6 +139,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Drop existing trigger if it exists
+DROP TRIGGER IF EXISTS handle_daily_actuals_updated_at ON public.daily_actuals;
+
+-- Create trigger
 CREATE TRIGGER handle_daily_actuals_updated_at
   BEFORE UPDATE ON public.daily_actuals
   FOR EACH ROW
