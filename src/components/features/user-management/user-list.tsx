@@ -25,7 +25,7 @@ import {
   CheckCircle,
   Trash2
 } from 'lucide-react';
-import { deleteUser, deactivateUser } from '@/lib/user-management';
+// import { deleteUser, deactivateUser } from '@/lib/user-management';
 import { useAuthContext } from '@/lib/auth-context';
 
 interface User {
@@ -53,21 +53,24 @@ export function UserList({ users, isLoading }: UserListProps) {
   // ユーザー削除mutation
   const deleteMutation = useMutation({
     mutationFn: async ({ userId, email }: { userId: string; email: string }) => {
-      console.log('=== MUTATION: Starting deleteUser function ===');
-      const result = await deleteUser(userId, email);
-      console.log('=== MUTATION: deleteUser result ===', result);
+      console.log('=== MUTATION: Starting deleteUser API call ===');
+      const response = await fetch(`/api/admin/users?userId=${userId}&email=${encodeURIComponent(email)}`, {
+        method: 'DELETE',
+      });
+      const result = await response.json();
+      console.log('=== MUTATION: deleteUser API result ===', result);
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'ユーザー削除に失敗しました');
+      }
+      
       return result;
     },
     onSuccess: (result) => {
       console.log('=== MUTATION: onSuccess callback ===', result);
-      if (result.success) {
-        console.log('Invalidating queries and closing dialog...');
-        queryClient.invalidateQueries({ queryKey: ['user-list'] });
-        setDeleteDialogOpen(false);
-        setSelectedUser(null);
-      } else {
-        console.error('Delete result shows failure:', result);
-      }
+      queryClient.invalidateQueries({ queryKey: ['user-list'] });
+      setDeleteDialogOpen(false);
+      setSelectedUser(null);
     },
     onError: (error) => {
       console.error('=== MUTATION: onError callback ===', error);
@@ -77,14 +80,25 @@ export function UserList({ users, isLoading }: UserListProps) {
   // ユーザー無効化mutation
   const deactivateMutation = useMutation({
     mutationFn: async ({ userId, email }: { userId: string; email: string }) => {
-      return await deactivateUser(userId, email);
+      const response = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId, email }),
+      });
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'ユーザー無効化に失敗しました');
+      }
+      
+      return result;
     },
     onSuccess: (result) => {
-      if (result.success) {
-        queryClient.invalidateQueries({ queryKey: ['user-list'] });
-        setDeleteDialogOpen(false);
-        setSelectedUser(null);
-      }
+      queryClient.invalidateQueries({ queryKey: ['user-list'] });
+      setDeleteDialogOpen(false);
+      setSelectedUser(null);
     },
   });
 

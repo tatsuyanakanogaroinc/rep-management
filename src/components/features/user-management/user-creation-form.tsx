@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Copy, Check, User, Mail, Lock, UserPlus, AlertCircle, CheckCircle } from 'lucide-react';
-import { createUser, validateEmail } from '@/lib/user-management';
+import { validateEmail } from '@/lib/user-management';
 
 interface CreatedUser {
   email: string;
@@ -45,13 +45,21 @@ export function UserCreationForm() {
     setCreatedUser(null);
 
     try {
-      const result = await createUser(email, role);
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, role }),
+      });
+
+      const result = await response.json();
 
       if (result.success) {
         setCreatedUser({
-          email: result.email!,
-          password: result.password!,
-          role: result.role!
+          email: result.user.email,
+          password: result.user.password,
+          role: result.user.role
         });
         setSuccess('ユーザーが正常に作成されました！');
         setEmail(''); // フォームをリセット

@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { supabaseAdmin } from './supabase-admin';
 
 /**
  * 管理者権限での強制削除（RLS回避）
@@ -107,15 +108,13 @@ export async function createUser(email: string, role: string = 'member') {
     
     const password = generatePassword();
     
-    // タイムアウト付きでユーザー作成（10秒）
-    const createUserPromise = supabase.auth.signUp({
+    // 管理者権限でユーザー作成（10秒タイムアウト）
+    const createUserPromise = supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      options: {
-        emailRedirectTo: undefined, // メール確認を無効化
-        data: {
-          role: role
-        }
+      email_confirm: true, // メール確認を自動完了
+      user_metadata: {
+        role: role
       }
     });
 
@@ -140,8 +139,8 @@ export async function createUser(email: string, role: string = 'member') {
       throw new Error('ユーザーの作成に失敗しました');
     }
 
-    // ユーザープロファイルを作成（タイムアウト付き、upsert使用）
-    const profilePromise = supabase
+    // 管理者権限でユーザープロファイルを作成（タイムアウト付き、upsert使用）
+    const profilePromise = supabaseAdmin
       .from('users')
       .upsert({
         id: authData.user.id,
@@ -173,7 +172,7 @@ export async function createUser(email: string, role: string = 'member') {
       if (profileError.code === '23505' || profileError.message.includes('duplicate key')) {
         console.log('Profile already exists, updating instead...');
         
-        const { error: updateError } = await supabase
+        const { error: updateError } = await supabaseAdmin
           .from('users')
           .update({
             role: role,
@@ -252,33 +251,15 @@ export function validatePassword(password: string): {
 }
 
 /**
- * ユーザーを削除する（プロファイルと認証データの両方）
+ * ユーザーを削除する（管理者権限でプロファイルと認証データの両方）
  */
 export async function deleteUser(userId: string, email: string) {
   try {
     console.log('=== DELETE USER START ===');
     console.log('Target:', { userId, email });
 
-    // 削除前にユーザーが存在することを確認
-    console.log('Step 1: Checking if user exists...');
-    const { data: existingUser, error: checkError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
-
-    console.log('Pre-deletion check result:', { 
-      existingUser, 
-      checkError,
-      exists: !!existingUser 
-    });
-
-    if (checkError || !existingUser) {
-      throw new Error(`削除対象のユーザーが見つかりません: ${email} (Error: ${checkError?.message})`);
-    }
-
     // 現在のユーザーの権限を確認
-    console.log('Step 2: Checking current user permissions...');
+    console.log('Step 1: Checking current user permissions...');
     const { data: currentUserSession } = await supabase.auth.getSession();
     const { data: currentUser } = await supabase
       .from('users')
@@ -296,72 +277,62 @@ export async function deleteUser(userId: string, email: string) {
       throw new Error('管理者権限が必要です');
     }
 
-    // タイムアウト付きで削除処理（15秒）
-    console.log('Step 3: Attempting standard deletion...');
-    const deleteTimeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('ユーザー削除がタイムアウトしました')), 15000)
-    );
+    // 削除前にユーザーが存在することを確認（管理者権限で）
+    console.log('Step 2: Checking if user exists...');
+    const { data: existingUser, error: checkError } = await supabaseAdmin
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
 
-    // 1. プロファイル削除を実行
-    const deleteProfilePromise = supabase
+    console.log('Pre-deletion check result:', { 
+      existingUser, 
+      checkError,
+      exists: !!existingUser 
+    });
+
+    if (checkError || !existingUser) {
+      throw new Error(`削除対象のユーザーが見つかりません: ${email} (Error: ${checkError?.message})`);
+    }
+
+    // Step 3: 管理者権限でユーザー認証情報を削除
+    console.log('Step 3: Deleting user authentication...');
+    const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    
+    if (authDeleteError) {
+      console.error('Auth deletion failed:', authDeleteError);
+      // 認証削除エラーでも継続（プロファイル削除を試行）
+    } else {
+      console.log('Auth deletion successful');
+    }
+
+    // Step 4: 管理者権限でプロファイルを削除
+    console.log('Step 4: Deleting user profile...');
+    const { data: deletedData, error: profileError } = await supabaseAdmin
       .from('users')
       .delete()
       .eq('id', userId)
-      .select(); // 削除されたレコードを返す
+      .select();
 
-    const { data: deletedData, error: profileError, count } = await Promise.race([
-      deleteProfilePromise,
-      deleteTimeout
-    ]);
-
-    console.log('Standard deletion result:', { 
+    console.log('Profile deletion result:', { 
       deletedData, 
       profileError,
-      count,
-      deletedCount: deletedData?.length || 0,
-      errorCode: profileError?.code,
-      errorMessage: profileError?.message
+      deletedCount: deletedData?.length || 0
     });
 
     if (profileError) {
-      console.error('Standard deletion failed:', profileError);
+      console.error('Profile deletion failed:', profileError);
       throw new Error(`プロファイル削除エラー: ${profileError.message} (Code: ${profileError.code})`);
     }
 
-    // 削除が実際に行われたかを確認
     if (!deletedData || deletedData.length === 0) {
-      console.warn('Step 4: Standard deletion returned no data. Attempting force deletion...');
-      
-      // 強制削除を試行
-      const forceResult = await forceDeleteUser(userId, email);
-      console.log('Force deletion result:', forceResult);
-      
-      if (!forceResult.success) {
-        throw new Error(`削除操作は成功応答でしたが、実際にはレコードが削除されませんでした。強制削除も失敗: ${forceResult.error}`);
-      }
-      
-      // 強制削除後の確認
-      const { data: finalCheck } = await supabase
-        .from('users')
-        .select('id')
-        .eq('id', userId)
-        .single();
-        
-      console.log('Post-force-deletion verification:', { finalCheck });
-      
-      return {
-        success: true,
-        message: `ユーザー ${email} が削除されました（${forceResult.method}）`,
-        deletedCount: 1,
-        method: forceResult.method
-      };
+      console.warn('Profile deletion returned no data');
+      throw new Error('プロファイルの削除に失敗しました（削除対象が見つかりませんでした）');
     }
 
-    console.log('Step 4: Standard deletion succeeded. Verifying...');
-    console.log('Deleted data:', deletedData);
-
-    // 削除後の確認：ユーザーが実際に削除されたかチェック
-    const { data: verifyUser, error: verifyError } = await supabase
+    // Step 5: 削除後の確認
+    console.log('Step 5: Verifying deletion...');
+    const { data: verifyUser, error: verifyError } = await supabaseAdmin
       .from('users')
       .select('id, email')
       .eq('id', userId)
@@ -376,11 +347,7 @@ export async function deleteUser(userId: string, email: string) {
 
     if (verifyUser) {
       console.error('CRITICAL: User still exists after deletion!', verifyUser);
-      throw new Error(`重大なエラー: 削除操作完了後もユーザーがデータベースに残っています。データ: ${JSON.stringify(verifyUser)}`);
-    }
-
-    if (verifyError && verifyError.code !== 'PGRST116') {
-      console.warn('Unexpected verification error:', verifyError);
+      throw new Error(`重大なエラー: 削除操作完了後もユーザーがデータベースに残っています`);
     }
 
     console.log('=== DELETE USER SUCCESS ===');
@@ -388,9 +355,9 @@ export async function deleteUser(userId: string, email: string) {
 
     return {
       success: true,
-      message: `ユーザー ${email} が正常に削除されました`,
+      message: `ユーザー ${email} が正常に削除されました（認証情報とプロファイルの両方）`,
       deletedCount: deletedData.length,
-      method: 'standard'
+      method: 'admin'
     };
 
   } catch (error) {
@@ -410,7 +377,20 @@ export async function deactivateUser(userId: string, email: string) {
   try {
     console.log('Deactivating user:', { userId, email });
 
-    const { error } = await supabase
+    // 現在のユーザーの権限を確認
+    const { data: currentUserSession } = await supabase.auth.getSession();
+    const { data: currentUser } = await supabase
+      .from('users')
+      .select('id, email, role')
+      .eq('id', currentUserSession.session?.user?.id)
+      .single();
+
+    if (currentUser?.role !== 'admin') {
+      throw new Error('管理者権限が必要です');
+    }
+
+    // 管理者権限でユーザーを無効化
+    const { error } = await supabaseAdmin
       .from('users')
       .update({ 
         is_active: false,
