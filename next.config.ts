@@ -8,7 +8,6 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   // デバッグ用設定
-  swcMinify: false,
   compiler: {
     removeConsole: false,
   },
