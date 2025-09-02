@@ -1,2 +1,2 @@
-// 一時的にデバッグ版を使用してReact Error #185を解決
-export { default } from './page-debug';
+// Step 1: 基本機能の段階的復元
+export { default } from './page-step1';
