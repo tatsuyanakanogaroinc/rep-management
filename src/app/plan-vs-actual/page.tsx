@@ -785,11 +785,13 @@ export default function PlanVsActualPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {(actualData.channels || []).map((channel) => {
-                      const plannedChannel = (planData.channels || []).find(p => p.name === channel.name);
-                      
-                      return (
-                        <div key={`channel-${channel.name}`} className="border rounded-lg p-4 space-y-3">
+                    {(actualData.channels || [])
+                      .filter(channel => channel && channel.name)
+                      .map((channel) => {
+                        const plannedChannel = (planData.channels || []).find(p => p.name === channel.name);
+                        
+                        return (
+                          <div key={`channel-${channel.name}`} className="border rounded-lg p-4 space-y-3">
                           <h4 className="font-medium">{channel.name}</h4>
                           <div className="grid grid-cols-3 gap-3">
                             <div>
@@ -833,8 +835,8 @@ export default function PlanVsActualPage() {
                             </div>
                           </div>
                         </div>
-                      );
-                    })}
+                        );
+                      })}
                   </CardContent>
                 </Card>
 
@@ -972,7 +974,7 @@ export default function PlanVsActualPage() {
                   <CardContent>
                     <div className="h-80">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={channelVariances}>
+                        <BarChart data={channelVariances.filter(channel => channel && channel.name)}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="name" fontSize={12} />
                           <YAxis 
@@ -1004,7 +1006,7 @@ export default function PlanVsActualPage() {
                   <CardContent>
                     <div className="h-80">
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={channelVariances}>
+                        <LineChart data={channelVariances.filter(channel => channel && channel.name)}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="name" fontSize={12} />
                           <YAxis fontSize={12} />

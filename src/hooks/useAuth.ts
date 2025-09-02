@@ -104,7 +104,7 @@ export function useAuth() {
     console.log(`useAuth: fetchUserProfile start`, { userId, isBackground });
     
     try {
-      // より短いタイムアウト（1.5秒）でフェッチを試行
+      // より長いタイムアウト（5秒）でフェッチを試行
       const profilePromise = supabase
         .from('users')
         .select('*')
@@ -112,7 +112,7 @@ export function useAuth() {
         .single();
 
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 1500)
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
       );
 
       const { data, error } = await Promise.race([profilePromise, timeoutPromise]);
