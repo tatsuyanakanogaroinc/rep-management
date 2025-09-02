@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createUser, deleteUser, deactivateUser } from '@/lib/user-management';
 
+// サーバーサイドでの実行を確保
+if (typeof window !== 'undefined') {
+  throw new Error('This API can only run on the server side');
+}
+
 // ユーザー作成API
 export async function POST(request: NextRequest) {
   try {

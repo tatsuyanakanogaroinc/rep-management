@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { supabaseAdmin } from './supabase-admin';
+import { getSupabaseAdmin } from './supabase-admin';
 
 /**
  * 管理者権限での強制削除（RLS回避）
@@ -109,6 +109,7 @@ export async function createUser(email: string, role: string = 'member') {
     const password = generatePassword();
     
     // 管理者権限でユーザー作成（10秒タイムアウト）
+    const supabaseAdmin = getSupabaseAdmin();
     const createUserPromise = supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -279,6 +280,7 @@ export async function deleteUser(userId: string, email: string) {
 
     // 削除前にユーザーが存在することを確認（管理者権限で）
     console.log('Step 2: Checking if user exists...');
+    const supabaseAdmin = getSupabaseAdmin();
     const { data: existingUser, error: checkError } = await supabaseAdmin
       .from('users')
       .select('*')
@@ -390,6 +392,7 @@ export async function deactivateUser(userId: string, email: string) {
     }
 
     // 管理者権限でユーザーを無効化
+    const supabaseAdmin = getSupabaseAdmin();
     const { error } = await supabaseAdmin
       .from('users')
       .update({ 
