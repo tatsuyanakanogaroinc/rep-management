@@ -7,6 +7,13 @@ import { Database } from '@/types/supabase';
 
 type UserProfile = Database['public']['Tables']['users']['Row'];
 
+// ユーザー表示名を取得する関数
+function getUserDisplayName(email: string): string {
+  if (email === 'tatsuya.nakano@garoinc.jp') return 'Tatsuya Nakano';
+  if (email === 'suzu.maruko@garoinc.jp') return 'Suzu Maruko';
+  return 'User';
+}
+
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -114,11 +121,12 @@ export function useAuth() {
         console.warn('useAuth: Profile fetch failed, using fallback:', error.message);
         // エラー時は常にフォールバックプロファイルを使用
         // 特定のユーザーの場合は管理者権限を付与
+        const isAuthorizedAdmin = userObj?.email === 'tatsuya.nakano@garoinc.jp' || userObj?.email === 'suzu.maruko@garoinc.jp';
         const fallbackProfile = {
           id: userId,
           email: userObj?.email || user?.email || '',
-          name: userObj?.email === 'tatsuya.nakano@garoinc.jp' ? 'Tatsuya Nakano' : 'User',
-          role: userObj?.email === 'tatsuya.nakano@garoinc.jp' ? 'admin' as const : 'member' as const,
+          name: getUserDisplayName(userObj?.email || user?.email || ''),
+          role: isAuthorizedAdmin ? 'admin' as const : 'member' as const,
           is_active: true,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -141,11 +149,12 @@ export function useAuth() {
       
       // 例外時も必ずフォールバックプロファイルを設定
       // 特定のユーザーの場合は管理者権限を付与
+      const isAuthorizedAdmin = userObj?.email === 'tatsuya.nakano@garoinc.jp' || userObj?.email === 'suzu.maruko@garoinc.jp';
       const fallbackProfile = {
         id: userId,
         email: userObj?.email || user?.email || '',
-        name: userObj?.email === 'tatsuya.nakano@garoinc.jp' ? 'Tatsuya Nakano' : 'User',
-        role: userObj?.email === 'tatsuya.nakano@garoinc.jp' ? 'admin' as const : 'member' as const,
+        name: getUserDisplayName(userObj?.email || user?.email || ''),
+        role: isAuthorizedAdmin ? 'admin' as const : 'member' as const,
         is_active: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()

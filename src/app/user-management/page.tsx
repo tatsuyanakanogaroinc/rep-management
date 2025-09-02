@@ -1,6 +1,7 @@
 'use client';
 
 import { ProtectedRoute } from '@/components/auth/protected-route';
+import { AppLayout } from '@/components/layout/app-layout';
 import { useAuthContext } from '@/lib/auth-context';
 import { UserCreationForm } from '@/components/features/user-management/user-creation-form';
 import { UserList } from '@/components/features/user-management/user-list';
