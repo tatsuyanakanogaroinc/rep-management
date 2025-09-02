@@ -119,11 +119,23 @@ export function LoginForm() {
           </div>
           
           <Button 
-            type="submit" 
+            type="button"
             onClick={(e) => {
               console.log('=== BUTTON CLICKED ===');
               console.log('Event:', e);
-              // フォーム送信は handleSubmit で処理される
+              e.preventDefault();
+              e.stopPropagation();
+              
+              console.log('=== MANUAL FORM SUBMIT ===');
+              const form = e.currentTarget.closest('form');
+              if (form) {
+                const formEvent = new Event('submit', { bubbles: true, cancelable: true });
+                form.dispatchEvent(formEvent);
+              } else {
+                console.log('Direct handleSubmit call');
+                const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+                handleSubmit(fakeEvent);
+              }
             }}
             className="w-full h-12 rounded-xl gradient-primary text-white border-0 shadow-soft hover:shadow-glow transition-all duration-300 font-medium text-base disabled:opacity-50 disabled:cursor-not-allowed" 
             disabled={loading}
