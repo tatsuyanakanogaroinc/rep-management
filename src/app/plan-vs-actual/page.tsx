@@ -236,9 +236,10 @@ export default function PlanVsActualPage() {
 
   // チャネル別CPA差異計算
   const calculateChannelVariances = () => {
-    return (planData.channels || []).map((plannedChannel) => {
-      const actualChannel = actualData.channels.find(c => c.name === plannedChannel.name);
-      if (!actualChannel) return null;
+    return (planData.channels || [])
+      .map((plannedChannel) => {
+        const actualChannel = actualData.channels.find(c => c.name === plannedChannel.name);
+        if (!actualChannel) return null;
 
       const cpaVariance = actualChannel.actualCpa - plannedChannel.plannedCpa;
       const cpaVariancePercent = plannedChannel.plannedCpa > 0 ? 
@@ -749,7 +750,7 @@ export default function PlanVsActualPage() {
                       <h4 className="font-medium text-sm mb-3">チャネル別計画</h4>
                       <div className="space-y-2">
                         {(planData.channels || []).map((channel, index) => (
-                          <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                          <div key={`plan-channel-${channel.name || index}`} className="flex justify-between items-center p-2 bg-gray-50 rounded">
                             <span className="text-sm">{channel.name}</span>
                             <div className="text-right">
                               <div className="text-sm font-medium">{channel.plannedAcquisitions}人</div>
@@ -784,11 +785,11 @@ export default function PlanVsActualPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {actualData.channels.map((channel) => {
+                    {(actualData.channels || []).map((channel) => {
                       const plannedChannel = (planData.channels || []).find(p => p.name === channel.name);
                       
                       return (
-                        <div key={channel.name} className="border rounded-lg p-4 space-y-3">
+                        <div key={`channel-${channel.name}`} className="border rounded-lg p-4 space-y-3">
                           <h4 className="font-medium">{channel.name}</h4>
                           <div className="grid grid-cols-3 gap-3">
                             <div>
@@ -903,9 +904,10 @@ export default function PlanVsActualPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
-                    {channelVariances.map((channel, index) => (
-                      channel && (
-                        <div key={index} className="border rounded-lg p-4">
+                    {channelVariances
+                      .filter(channel => channel !== null && channel !== undefined)
+                      .map((channel, index) => (
+                        <div key={channel.name || index} className="border rounded-lg p-4">
                           <h4 className="font-semibold text-lg mb-4">{channel.name}</h4>
                         
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -953,7 +955,7 @@ export default function PlanVsActualPage() {
                         </div>
                         </div>
                       )
-                    ))}
+                    )}
                   </div>
                 </CardContent>
               </Card>
