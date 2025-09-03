@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState, useEffect } from 'react';
 import { format, addMonths, subMonths } from 'date-fns';
 import { ja } from 'date-fns/locale';
+import { useDailyReportData } from './hooks/useDailyReportData';
 import { 
   Target, 
   TrendingUp, 
@@ -170,14 +171,29 @@ export default function PlanVsActualExecutivePage() {
     multiMonthData.find(m => m.month === selectedMonth)?.actual || MULTI_MONTH_DATA[0].actual
   );
 
+  // 日次レポートデータを取得
+  const { monthlyAggregate, loading: dailyReportLoading, error: dailyReportError, mapChannelNames } = useDailyReportData(selectedMonth);
+
   // 選択月が変更された時にデータを更新
   useEffect(() => {
     const monthData = multiMonthData.find(m => m.month === selectedMonth);
     if (monthData) {
       setPlanData(monthData.plan);
-      setActualData(monthData.actual);
+      
+      // 日次レポートデータがある場合は実データに反映、ない場合はサンプルデータを使用
+      if (monthlyAggregate && mapChannelNames) {
+        const realChannelData = mapChannelNames();
+        setActualData({
+          ...monthData.actual,
+          newAcquisitions: monthlyAggregate.totalAcquisitions,
+          churnCount: monthlyAggregate.totalChurns,
+          channels: realChannelData
+        });
+      } else {
+        setActualData(monthData.actual);
+      }
     }
-  }, [selectedMonth, multiMonthData]);
+  }, [selectedMonth, multiMonthData, monthlyAggregate, mapChannelNames]);
 
   // 月選択肢の生成
   const monthOptions = multiMonthData
@@ -480,7 +496,19 @@ export default function PlanVsActualExecutivePage() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">経営ダッシュボード</h1>
-              <p className="text-muted-foreground">予実管理と戦略的意思決定支援</p>
+              <p className="text-muted-foreground">
+                予実管理と戦略的意思決定支援
+                {monthlyAggregate && (
+                  <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                    実データ連携中
+                  </span>
+                )}
+                {dailyReportLoading && (
+                  <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                    データ読み込み中...
+                  </span>
+                )}
+              </p>
             </div>
             <div className="flex gap-3">
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
@@ -986,7 +1014,7 @@ export default function PlanVsActualExecutivePage() {
                           <Tooltip 
                             formatter={(value: number, name: string, props: any) => [
                               `${value}人 (${props.payload.percentage}%)`,
-                              '획득数'
+                              '獲得数'
                             ]}
                           />
                           <Legend />

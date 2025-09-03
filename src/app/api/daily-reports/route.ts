@@ -18,6 +18,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('user_id');
     const date = searchParams.get('date');
+    const startDate = searchParams.get('start_date');
+    const endDate = searchParams.get('end_date');
     const limit = searchParams.get('limit') || '50';
 
     let query = supabase
@@ -39,6 +41,10 @@ export async function GET(request: NextRequest) {
 
     if (date) {
       query = query.eq('date', date);
+    }
+
+    if (startDate && endDate) {
+      query = query.gte('date', startDate).lte('date', endDate);
     }
 
     const { data, error } = await query;
